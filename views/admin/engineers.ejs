@@ -1,60 +1,55 @@
 <%- contentFor('body') %>
 
-<div class="container-fluid py-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Engineers Management</h2>
+    </div>
+
+  <div class="card shadow-sm mb-4">
+      <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-2">
+          <select class="form-select" id="statusFilter">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="on_leave">On Leave</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select class="form-select" id="designationFilter">
+            <option value="">All Designations</option>
+            <option value="Student">Student</option>
+            <option value="Employee">Employee</option>
+            <option value="Freelancer">Freelancer</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select class="form-select" id="specializationFilter">
+            <option value="">All Specializations</option>
+            <option value="frontend">Frontend</option>
+            <option value="backend">Backend</option>
+            <option value="fullstack">Fullstack</option>
+            <option value="mobile">Mobile</option>
+            <option value="devOps">DevOps</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <input type="number" class="form-control" id="minExperience" placeholder="Min Exp">
+        </div>
+        <div class="col-md-2">
+          <input type="number" class="form-control" id="maxExperience" placeholder="Max Exp">
+        </div>
+        <div class="col-md-2">
+          <input type="text" class="form-control" id="searchInput" placeholder="Search name/email...">
+        </div>
+      </div>
+    </div>
   </div>
 
-  <% if (typeof engineers !== 'undefined' && engineers.length > 0) { %>
-    <div class="row g-4">
-      <% engineers.forEach(engineer => { %>
-        <div class="col-md-6 col-lg-4">
-          <div class="card engineer-card shadow-sm h-100">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-start mb-3">
-                <h5 class="card-title mb-0"><%= engineer.name %></h5>
-                <span class="badge bg-<%= engineer.status === 'Active' ? 'success' : 'secondary' %>"><%= engineer.status %></span>
-              </div>
-              <p class="mb-1"><i class="fas fa-envelope me-2"></i><%= engineer.email %></p>
-              <% if (engineer.designation) { %>
-                <p class="mb-1 text-muted">Designation: <%= engineer.designation %></p>
-              <% } %>
-              <% if (engineer.specialization) { %>
-                <p class="mb-1 text-muted">Specialization: <%= engineer.specialization %></p>
-              <% } %>
-              <% if (engineer.experience) { %>
-                <p class="mb-1 text-muted">Experience: <%= engineer.experience %> years</p>
-              <% } %>
-              <% if (engineer.skills && engineer.skills.length > 0) { %>
-                <div class="mb-2">
-                  <% engineer.skills.forEach(skill => { %>
-                    <span class="badge bg-info skill-badge"><%= skill %></span>
-                  <% }) %>
-                </div>
-              <% } %>
-              <% if (engineer.bio) { %>
-                <p class="card-text"><small class="text-muted"><%= engineer.bio %></small></p>
-              <% } %>
-            </div>
-            <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
-              <small class="text-muted">Joined: <%= engineer.createdAt ? new Date(engineer.createdAt).toLocaleDateString() : '' %></small>
-              <div class="card-actions">
-                <% if (engineer.status === 'Active') { %>
-                  <button class="btn btn-sm btn-outline-warning btn-action" onclick="confirmStatusChange('<%= engineer._id %>', 'deactivate')" title="Set Inactive"><i class="fas fa-user-slash"></i></button>
-                <% } else { %>
-                  <button class="btn btn-sm btn-outline-success btn-action" onclick="confirmStatusChange('<%= engineer._id %>', 'activate')" title="Set Active"><i class="fas fa-user-check"></i></button>
-                <% } %>
-                <button class="btn btn-sm btn-outline-primary btn-action" data-engineer='<%- JSON.stringify({ _id: engineer._id, name: engineer.name, designation: engineer.designation, experience: engineer.experience }) %>' onclick="handleEditBtnClick(this)" title="Edit"><i class="fas fa-edit"></i></button>
-                <button class="btn btn-sm btn-outline-danger btn-action" onclick="confirmDeleteEngineer('<%= engineer._id %>')" title="Delete"><i class="fas fa-trash"></i></button>
-              </div>
-            </div>
-          </div>
-        </div>
-      <% }) %>
-    </div>
-  <% } else { %>
-    <div class="text-center text-muted py-5">No engineers found.</div>
-  <% } %>
+  <div id="engineersList">
+    <!-- Engineers will be rendered here dynamically -->
+  </div>
 </div>
 
 <!-- Edit Engineer Modal -->
@@ -170,8 +165,14 @@
     fetch(`/admin/api/engineers/${deleteEngineerId}`, { method: 'DELETE' })
       .then(res => res.json())
       .then(data => {
-        if (data.success) location.reload();
-      });
+        if (data.success) {
+          toast.success('Engineer deleted successfully!');
+          setTimeout(() => location.reload(), 1200);
+        } else {
+          toast.error(data.message || 'Failed to delete engineer');
+        }
+      })
+      .catch(() => toast.error('Failed to delete engineer'));
   });
 
   function confirmStatusChange(id, action) {
@@ -188,8 +189,15 @@
     fetch(`/admin/api/engineers/${statusEngineerId}/${statusAction}`, { method: 'POST' })
       .then(res => res.json())
       .then(data => {
-        if (data.success) location.reload();
-      });
+        if (data.success) {
+    
+          toast.success('Engineer status updated!');
+          setTimeout(() => location.reload(), 1200);
+        } else {
+          toast.error(data.message || 'Failed to update status');
+        }
+      })
+      .catch(() => toast.error('Failed to update status'));
   });
 
   function handleEditBtnClick(btn) {
@@ -221,7 +229,100 @@
     })
       .then(res => res.json())
       .then(resp => {
-        if (resp.success) location.reload();
-      });
+
+        if (resp.success) {
+          toast.success('Engineer updated successfully!');
+          setTimeout(() => location.reload(), 1200);
+        } else {
+          toast.error(resp.message || 'Failed to update engineer');
+        }
+      })
+      .catch(() => toast.error('Failed to update engineer'));
   });
-</script>
+
+  async function loadEngineers() {
+    try {
+      const status = document.getElementById('statusFilter').value;
+      const designation = document.getElementById('designationFilter').value;
+      const specialization = document.getElementById('specializationFilter').value;
+      const minExp = document.getElementById('minExperience').value;
+      const maxExp = document.getElementById('maxExperience').value;
+      const search = document.getElementById('searchInput').value;
+
+
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (designation) params.append('designation', designation);
+      if (specialization) params.append('specialization', specialization);
+      if (minExp) params.append('minExperience', minExp);
+      if (maxExp) params.append('maxExperience', maxExp);
+      if (search) params.append('search', search);
+
+      const response = await fetch('/admin/api/engineers?' + params.toString());
+      const data = await response.json();
+            
+      const engineersList = document.getElementById('engineersList');
+      if (!data.data || !data.data.length) {
+        engineersList.innerHTML = '<div class="text-center text-muted py-5">No engineers found.</div>';
+        return;
+      }
+      engineersList.innerHTML = `
+        <div class="row g-4">
+          ${data.data.map(engineer => `
+            <div class="col-md-6 col-lg-4">
+              <div class="card engineer-card shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="card-title mb-0">${engineer.name}</h5>
+                    <span class="badge bg-${engineer.status === 'active' ? 'success' : 'secondary'}">${engineer.status}</span>
+                  </div>
+                  <p class="mb-1"><i class="fas fa-envelope me-2"></i>${engineer.email}</p>
+                  ${engineer.designation ? `<p class="mb-1 text-muted"><i class="fas fa-briefcase me-2"></i>${engineer.designation}</p>` : ''}
+                  ${engineer.specialization ? `<p class="mb-1 text-muted"><i class="fas fa-code me-2"></i>${engineer.specialization}</p>` : ''}
+                  ${engineer.experience ? `<p class="mb-1 text-muted"><i class="fas fa-clock me-2"></i>${engineer.experience} years</p>` : ''}
+                  ${(engineer.skills && engineer.skills.length > 0) ? `
+                    <div class="mb-2">
+                      <small class="text-muted d-block mb-1"><i class="fas fa-tools me-2"></i>Skills:</small>
+                      ${engineer.skills.map(skill => `<span class="badge bg-info skill-badge">${skill}</span>`).join('')}
+                    </div>
+                  ` : ''}
+                  ${engineer.bio ? `<p class="card-text mt-2"><small class="text-muted"><i class="fas fa-info-circle me-2"></i>${engineer.bio}</small></p>` : ''}
+                </div>
+                <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                  <small class="text-muted">Joined: ${engineer.createdAt ? new Date(engineer.createdAt).toLocaleDateString() : ''}</small>
+                  <div class="card-actions">
+                    ${engineer.status === 'active' ? 
+                      `<button class="btn btn-sm btn-outline-warning btn-action" onclick="confirmStatusChange('${engineer._id}', 'deactivate')" title="Set inactive"><i class="fas fa-user-slash"></i></button>` : 
+                      `<button class="btn btn-sm btn-outline-success btn-action" onclick="confirmStatusChange('${engineer._id}', 'activate')" title="Set active"><i class="fas fa-user-check"></i></button>`
+                    }
+                    <button class="btn btn-sm btn-outline-primary btn-action" data-engineer='${JSON.stringify({ _id: engineer._id, name: engineer.name, designation: engineer.designation, experience: engineer.experience })}' onclick="handleEditBtnClick(this)" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger btn-action" onclick="confirmDeleteEngineer('${engineer._id}')" title="Delete"><i class="fas fa-trash"></i></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } catch (error) {
+      console.error('Error loading engineers:', error);
+      toast.error('Failed to load engineers');
+    }
+  }
+
+  // Add event listeners
+  document.getElementById('statusFilter').addEventListener('change', loadEngineers);
+  document.getElementById('designationFilter').addEventListener('change', loadEngineers);
+  document.getElementById('specializationFilter').addEventListener('change', loadEngineers);
+  document.getElementById('minExperience').addEventListener('input', loadEngineers);
+  document.getElementById('maxExperience').addEventListener('input', loadEngineers);
+  document.getElementById('searchInput').addEventListener('input', function() {
+    clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(loadEngineers, 300);
+  });
+
+  // Call loadEngineers() on page load
+  document.addEventListener('DOMContentLoaded', loadEngineers);
+  </script>
+<%- include('partials/toaster') %>
+
