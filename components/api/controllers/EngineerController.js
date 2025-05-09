@@ -4,10 +4,22 @@ const { validationResult } = require('express-validator');
 // Get all engineers
 async function getAllEngineers(req, res) {
     try {
-        const engineers = await Engineer.find()
+        const { status, designation, specialization, minExperience, maxExperience, search } = req.query;
+        const filter = {};
+        if (status) filter.status = status;
+        if (designation) filter.designation = designation;
+        if (specialization) filter.specialization = specialization;
+        if (minExperience) filter.experience = { ...filter.experience, $gte: Number(minExperience) };
+        if (maxExperience) filter.experience = { ...filter.experience, $lte: Number(maxExperience) };
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+        const engineers = await Engineer.find(filter)
             .select('-password')
             .sort({ createdAt: -1 });
-        
         res.json({
             success: true,
             data: engineers

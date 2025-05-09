@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 
 const getLoginPage = async (req, res) => {
-  res.render('admin/login', { error: null });
+  res.render('admin/login', { error: null, layout: false });
 };
 
 const login = async (req, res) => {
@@ -17,7 +17,7 @@ const login = async (req, res) => {
     const admin = await Admin.findOne({ email });
 
     if (!admin || !(await admin.comparePassword(password))) {
-      return res.render('admin/login', { error: 'Invalid credentials' });
+      return res.render('admin/login', { error: 'Invalid credentials', layout: false });
     }
 
     admin.lastLogin = new Date();
@@ -27,7 +27,7 @@ const login = async (req, res) => {
     res.redirect('/admin/dashboard');
   } catch (error) {
     console.error(error);
-    res.render('admin/login', { error: 'Something went wrong' });
+    res.render('admin/login', { error: 'Something went wrong', layout: false });
   }
 };
 
@@ -197,18 +197,13 @@ const getDashboardStats = async (req, res = null) => {
 
     // Calculate potential earnings from active projects
     const activeProjectsEarnings = projectStats[0].activeProjects.reduce((sum, project) => {
-      console.log('Active Project:', project.title, 'Amount:', project.paymentAmount);
       return sum + (Number(project.paymentAmount) || 0);
     }, 0);
 
     // Calculate potential earnings from pending projects
     const pendingProjectsEarnings = projectStats[0].pendingProjects.reduce((sum, project) => {
-      console.log('Pending Project:', project.title, 'Amount:', project.paymentAmount);
       return sum + (Number(project.paymentAmount) || 0);
     }, 0);
-
-    console.log('Active Projects Earnings:', activeProjectsEarnings);
-    console.log('Pending Projects Earnings:', pendingProjectsEarnings);
 
   const stats = {
     totalClients,
@@ -228,14 +223,7 @@ const getDashboardStats = async (req, res = null) => {
       projectGrowth: 0
     };
 
-    console.log('Final Stats:', {
-      totalEarnings: stats.totalEarnings,
-      activeProjectsEarnings: stats.activeProjectsEarnings,
-      pendingProjectsEarnings: stats.pendingProjectsEarnings,
-      activeProjectsCount: stats.activeProjectsList.length,
-      pendingProjectsCount: stats.pendingProjectsList.length
-    });
-
+  
   if (res) return res.json(stats);
   return stats;
   } catch (error) {
@@ -308,8 +296,16 @@ const logout = (req, res) => {
 // Project Management APIs
 const getAllProjects = async (req, res) => {
   try {
-    // Fetch all projects
-    const projects = await Project.find().sort({ createdAt: -1 }).lean();
+    // Read filters from query params
+    const { status, category, complexity, search } = req.query;
+    const filter = {};
+    if (status) filter.status = status;
+    if (category) filter.category = category;
+    if (complexity) filter.complexity = complexity;
+    if (search) filter.title = { $regex: search, $options: 'i' };
+
+    // Fetch filtered projects
+    const projects = await Project.find(filter).sort({ createdAt: -1 }).lean();
 
     // Get all unique client_ids from the projects
     const clientIds = [...new Set(projects.map(p => p.client_id.toString()))];
@@ -542,159 +538,6 @@ const deleteProject = async (req, res) => {
   }
 };
 
-// Client Management APIs
-const getAllClients = async (req, res) => {
-  try {
-    const clients = await Client.find().sort({ createdAt: -1 });
-    res.json({
-      success: true,
-      data: clients
-    });
-  } catch (error) {
-    console.error('Error in getAllClients:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching clients'
-    });
-  }
-};
-
-const getClientById = async (req, res) => {
-  try {
-    const client = await Client.findById(req.params.id);
-    if (!client) {
-      return res.status(404).json({
-        success: false,
-        message: 'Client not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: client
-    });
-  } catch (error) {
-    console.error('Error in getClientById:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching client'
-    });
-  }
-};
-
-const createClient = async (req, res) => {
-  try {
-    const { name, email, phone } = req.body;
-
-    const client = new Client({
-      name,
-      email,
-      phone,
-      status: 'active'
-    });
-
-    await client.save();
-
-    // Create activity log
-    const activity = new Activity({
-      title: 'New Client Added',
-      description: `Client "${name}" has been added`,
-      type: 'client',
-      icon: 'user-plus'
-    });
-    await activity.save();
-
-    res.status(201).json({
-      success: true,
-      data: client
-    });
-  } catch (error) {
-    console.error('Error in createClient:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error creating client'
-    });
-  }
-};
-
-const updateClient = async (req, res) => {
-  try {
-    const { name, email, phone, status } = req.body;
-
-    const client = await Client.findById(req.params.id);
-    if (!client) {
-      return res.status(404).json({
-        success: false,
-        message: 'Client not found'
-      });
-    }
-
-    // Update client fields
-    Object.assign(client, {
-      name,
-      email,
-      phone,
-      status
-    });
-
-    await client.save();
-
-    // Create activity log
-    const activity = new Activity({
-      title: 'Client Updated',
-      description: `Client "${name}" has been updated`,
-      type: 'client',
-      icon: 'edit'
-    });
-    await activity.save();
-
-    res.json({
-      success: true,
-      data: client
-    });
-  } catch (error) {
-    console.error('Error in updateClient:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating client'
-    });
-  }
-};
-
-const deleteClient = async (req, res) => {
-  try {
-    const client = await Client.findById(req.params.id);
-    if (!client) {
-      return res.status(404).json({
-        success: false,
-        message: 'Client not found'
-      });
-    }
-
-    await client.remove();
-
-    // Create activity log
-    const activity = new Activity({
-      title: 'Client Deleted',
-      description: `Client "${client.name}" has been deleted`,
-      type: 'client',
-      icon: 'trash'
-    });
-    await activity.save();
-
-    res.json({
-      success: true,
-      message: 'Client deleted successfully'
-    });
-  } catch (error) {
-    console.error('Error in deleteClient:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting client'
-    });
-  }
-};
-
 const setActive = async (req, res) => {
   await Engineer.findByIdAndUpdate(req.params.id, { status: 'Active' });
   res.json({ success: true });
@@ -743,6 +586,10 @@ const updateProjectStatus = async (req, res) => {
   }
 };
 
+const getProjectsPage = (req, res) => {
+  res.render('admin/projects');
+};
+
 module.exports = {
   getLoginPage,
   login,
@@ -757,11 +604,7 @@ module.exports = {
   deleteProject,
   updateProjectStatus,
   // Client APIs
-  getAllClients,
-  getClientById,
-  createClient,
-  updateClient,
-  deleteClient,
   setActive,
-  setInactive
+  setInactive,
+  getProjectsPage
 };

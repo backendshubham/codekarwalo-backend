@@ -163,10 +163,21 @@
     }
   }
 
-  // Load projects
+  // Load projects with filters
   async function loadProjects() {
     try {
-      const response = await fetch('/admin/api/projects');
+      const status = document.getElementById('statusFilter').value;
+      const category = document.getElementById('categoryFilter').value;
+      const complexity = document.getElementById('complexityFilter').value;
+      const search = document.getElementById('searchInput').value;
+
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (category) params.append('category', category);
+      if (complexity) params.append('complexity', complexity);
+      if (search) params.append('search', search);
+
+      const response = await fetch('/admin/api/projects?' + params.toString());
       const data = await response.json();
       if (data.success) {
         const projectsList = document.getElementById('projectsList');
@@ -218,6 +229,14 @@
 
   document.addEventListener('DOMContentLoaded', function() {
     loadProjects();
+    // Add event listeners for filters
+    document.getElementById('statusFilter').addEventListener('change', loadProjects);
+    document.getElementById('categoryFilter').addEventListener('change', loadProjects);
+    document.getElementById('complexityFilter').addEventListener('change', loadProjects);
+    document.getElementById('searchInput').addEventListener('input', function() {
+      clearTimeout(window.searchTimeout);
+      window.searchTimeout = setTimeout(loadProjects, 300);
+    });
     // Delegate all project actions
     document.getElementById('projectsList').addEventListener('click', function(e) {
       // Edit
@@ -258,9 +277,10 @@
       .then(data => {
         if (data.success) {
           bootstrap.Modal.getInstance(document.getElementById('editProjectModal')).hide();
-          loadProjects();
+          toast.success('Project updated successfully!');
+          setTimeout(() => loadProjects(), 1200);
         } else {
-          alert('Failed to update project');
+          toast.error(data.message || 'Failed to update project');
         }
       });
     });
@@ -277,9 +297,10 @@
       .then(data => {
         if (data.success) {
           bootstrap.Modal.getInstance(document.getElementById('confirmStatusModal')).hide();
-          loadProjects();
+          toast.success('Status updated!');
+          setTimeout(() => loadProjects(), 1200);
         } else {
-          alert('Failed to update status');
+          toast.error(data.message || 'Failed to update status');
         }
       });
     });
@@ -292,11 +313,13 @@
         .then(data => {
           if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
-            loadProjects();
+            toast.success('Project deleted successfully!');
+            setTimeout(() => loadProjects(), 1200);
           } else {
-            alert('Failed to delete project');
+            toast.error(data.message || 'Failed to delete project');
           }
         });
     });
   });
-</script> 
+</script>
+<%- include('partials/toaster') %>

@@ -194,7 +194,25 @@
     <!-- Additional Scripts -->
     <%- script %>
     
-    <!-- Toaster -->
+    Toaster
     <%- include('partials/toaster') %>
+    
+    <!-- Notyf CSS & JS CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+    <script>
+      const notyf = new Notyf({
+        duration: 3000,
+        position: { x: 'right', y: 'top' }
+      });
+      window.toast = {
+        success: (msg) => notyf.success(msg),
+        error: (msg) => notyf.error(msg)
+      };
+      // Test toast on first load
+      setTimeout(() => {
+        window.toast.success('Notyf toast system initialized!');
+      }, 1000);
+    </script>
 </body>
 </html> 

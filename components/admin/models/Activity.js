@@ -11,7 +11,7 @@ const activitySchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['primary', 'success', 'warning', 'danger', 'info'],
+        enum: ['primary', 'success', 'warning', 'danger', 'info', 'client', 'project', 'task', 'info', 'engineer', 'admin', 'other'],
         default: 'primary'
     },
     icon: {
