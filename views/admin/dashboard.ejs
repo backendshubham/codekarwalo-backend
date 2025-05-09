@@ -1,0 +1,246 @@
+<%- contentFor('body') %>
+<style>
+  .timeline {
+    position: relative;
+    padding: 1rem 0;
+  }
+  .timeline-item {
+    position: relative;
+    padding-left: 3rem;
+    padding-bottom: 1.5rem;
+  }
+  .timeline-item:last-child {
+    padding-bottom: 0;
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 1rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #e5e7eb;
+  }
+  .timeline-icon {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .timeline-content {
+    position: relative;
+  }
+  .bg-primary-subtle { background-color: rgba(37, 99, 235, 0.1); }
+  .bg-success-subtle { background-color: rgba(16, 185, 129, 0.1); }
+  .bg-warning-subtle { background-color: rgba(245, 158, 11, 0.1); }
+  .bg-danger-subtle { background-color: rgba(239, 68, 68, 0.1); }
+  .bg-info-subtle { background-color: rgba(6, 182, 212, 0.1); }
+  .stat-card {
+    transition: transform 0.2s;
+  }
+  .stat-card:hover {
+    transform: translateY(-5px);
+  }
+</style>
+
+<div class="container-fluid py-4">
+  <!-- Header Stats -->
+  <div class="row g-4 mb-4">
+    <% const metrics = [
+      { 
+        label: 'Total Clients', 
+        count: stats.totalClients || 0, 
+        icon: 'fa-users', 
+        color: 'primary',
+        description: 'Total registered clients'
+      },
+      { 
+        label: 'Total Engineers', 
+        count: stats.totalEngineers || 0, 
+        icon: 'fa-code', 
+        color: 'info',
+        description: 'Available engineers'
+      },
+      { 
+        label: 'Total Projects', 
+        count: stats.totalProjects || 0, 
+        icon: 'fa-clipboard-list', 
+        color: 'secondary',
+        description: 'All projects'
+      },
+      { 
+        label: 'Active Projects', 
+        count: stats.activeProjects || 0, 
+        icon: 'fa-play-circle', 
+        color: 'success',
+        description: 'Projects in progress'
+      },
+      { 
+        label: 'Pending Projects', 
+        count: stats.projectsInProgress || 0, 
+        icon: 'fa-clock', 
+        color: 'warning',
+        description: 'Awaiting start'
+      },
+      { 
+        label: 'Total Earnings', 
+        count: '$' + ((stats.totalEarnings || 0).toLocaleString()), 
+        icon: 'fa-dollar-sign', 
+        color: 'success',
+        description: 'Total project earnings'
+      }
+    ]; %>
+
+    <% metrics.forEach(m => { %>
+      <div class="col-md-4 col-lg-3 col-xl-2">
+        <div class="card h-100 stat-card shadow-sm">
+          <div class="card-body text-center">
+            <div class="mb-2 bg-<%= m.color %> bg-opacity-10 p-3 rounded-circle d-inline-block">
+              <i class="fas <%= m.icon %> text-<%= m.color %> fa-lg"></i>
+            </div>
+            <h6 class="mt-2 text-muted"><%= m.label %></h6>
+            <h4 class="fw-bold mb-1"><%= m.count %></h4>
+            <small class="text-muted"><%= m.description %></small>
+          </div>
+        </div>
+      </div>
+    <% }); %>
+  </div>
+
+  <div class="row g-4">
+    <!-- Active Projects -->
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-0">Active Projects</h5>
+            <small class="text-muted">Total Earnings: $<%= (stats.activeProjectsEarnings || 0).toLocaleString() %></small>
+            <small class="d-block text-muted">Projects: <%= stats.activeProjectsList ? stats.activeProjectsList.length : 0 %></small>
+          </div>
+          <a href="/admin/projects" class="btn btn-sm btn-primary">View All</a>
+        </div>
+        <div class="card-body">
+          <% if (stats.activeProjectsList && stats.activeProjectsList.length > 0) { %>
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Project Details</th>
+                    <th>Skills</th>
+                    <th>Timeline</th>
+                    <th>Payment</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% stats.activeProjectsList.slice(0, 5).forEach(project => { %>
+                    <tr>
+                      <td>
+                        <div class="fw-bold"><%= project.title %></div>
+                        <small class="text-muted">Client: <%= project.clientName %></small>
+                      </td>
+                      <td>
+                        <% if (project.requiredSkills && project.requiredSkills.length > 0) { %>
+                          <% project.requiredSkills.forEach(skill => { %>
+                            <span class="badge bg-info me-1 mb-1"><%= skill %></span>
+                          <% }); %>
+                        <% } else { %>
+                          <span class="text-muted">No skills specified</span>
+                        <% } %>
+                      </td>
+                      <td>
+                        <div class="d-flex flex-column">
+                          <small class="text-muted">Start: <%= new Date(project.startDate).toLocaleDateString() %></small>
+                          <small class="text-danger">Due: <%= new Date(project.deadline).toLocaleDateString() %></small>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="d-flex flex-column">
+                          <small class="text-muted"><%= project.paymentMethod %></small>
+                          <span class="fw-bold">$<%= (Number(project.paymentAmount) || 0).toLocaleString() %></span>
+                        </div>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          <% } else { %>
+            <div class="text-center py-4">
+              <p class="text-muted mb-0">No active projects found</p>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Projects -->
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-0">Pending Projects</h5>
+            <small class="text-muted">Total Earnings: $<%= (stats.pendingProjectsEarnings || 0).toLocaleString() %></small>
+            <small class="d-block text-muted">Projects: <%= stats.pendingProjectsList ? stats.pendingProjectsList.length : 0 %></small>
+          </div>
+          <a href="/admin/projects" class="btn btn-sm btn-primary">View All</a>
+        </div>
+        <div class="card-body">
+          <% if (stats.pendingProjectsList && stats.pendingProjectsList.length > 0) { %>
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Project Details</th>
+                    <th>Skills</th>
+                    <th>Timeline</th>
+                    <th>Payment</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% stats.pendingProjectsList.slice(0, 5).forEach(project => { %>
+                    <tr>
+                      <td>
+                        <div class="fw-bold"><%= project.title %></div>
+                        <small class="text-muted">Client: <%= project.clientName %></small>
+                      </td>
+                      <td>
+                        <% if (project.requiredSkills && project.requiredSkills.length > 0) { %>
+                          <% project.requiredSkills.forEach(skill => { %>
+                            <span class="badge bg-info me-1 mb-1"><%= skill %></span>
+                          <% }); %>
+                        <% } else { %>
+                          <span class="text-muted">No skills specified</span>
+                        <% } %>
+                      </td>
+                      <td>
+                        <div class="d-flex flex-column">
+                          <small class="text-muted">Start: <%= new Date(project.startDate).toLocaleDateString() %></small>
+                          <small class="text-danger">Due: <%= new Date(project.deadline).toLocaleDateString() %></small>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="d-flex flex-column">
+                          <small class="text-muted"><%= project.paymentMethod %></small>
+                          <span class="fw-bold">$<%= (Number(project.paymentAmount) || 0).toLocaleString() %></span>
+                        </div>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          <% } else { %>
+            <div class="text-center py-4">
+              <p class="text-muted mb-0">No pending projects found</p>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
