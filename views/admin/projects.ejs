@@ -1,0 +1,302 @@
+<style>
+  .project-card {
+    transition: transform 0.2s;
+  }
+  .project-card:hover {
+    transform: translateY(-5px);
+  }
+  .status-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+  }
+  .skill-badge {
+    margin: 0.2rem;
+  }
+  .card-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+</style>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Projects Management</h2>
+  </div>
+
+  <!-- Project Filters -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <select class="form-select" id="statusFilter">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="in-progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <select class="form-select" id="categoryFilter">
+            <option value="">All Categories</option>
+            <option value="Software Development">Software Development</option>
+            <option value="Web Development">Web Development</option>
+            <option value="Graphic Design">Graphic Design</option>
+            <option value="Data Science">Data Science</option>
+            <option value="UI/UX Design">UI/UX Design</option>
+            <option value="Embedded Systems">Embedded Systems</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <select class="form-select" id="complexityFilter">
+            <option value="">All Complexity</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <input type="text" class="form-control" id="searchInput" placeholder="Search projects...">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Projects List -->
+  <div class="row g-4" id="projectsList">
+    <!-- Projects will be loaded here dynamically -->
+  </div>
+</div>
+
+<!-- Edit Project Modal -->
+<div class="modal fade" id="editProjectModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Project</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editProjectForm">
+          <input type="hidden" name="id" id="editProjectId">
+          <div class="mb-2">
+            <label class="form-label">Project Name</label>
+            <input type="text" class="form-control" name="title" id="editProjectTitle" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Price</label>
+            <input type="number" class="form-control" name="paymentAmount" id="editProjectPayment" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveProjectBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete this project?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Status Change Modal -->
+<div class="modal fade" id="confirmStatusModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Status Change</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="statusChangeMsg">Are you sure you want to change the status?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmStatusBtn">Yes, Change</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/bootstrap.bundle.min.js"></script>
+<script>
+  let deleteProjectId = null;
+  let statusProjectId = null;
+  let statusAction = null;
+
+  // Helper functions
+  function getStatusColor(status) {
+    switch (status) {
+      case 'completed': return 'success';
+      case 'in-progress': return 'primary';
+      case 'pending': return 'warning';
+      case 'cancelled': return 'danger';
+      default: return 'secondary';
+    }
+  }
+
+  function getComplexityColor(complexity) {
+    switch (complexity) {
+      case 'High': return 'danger';
+      case 'Medium': return 'warning';
+      case 'Low': return 'success';
+      default: return 'secondary';
+    }
+  }
+
+  // Load projects
+  async function loadProjects() {
+    try {
+      const response = await fetch('/admin/api/projects');
+      const data = await response.json();
+      if (data.success) {
+        const projectsList = document.getElementById('projectsList');
+        if (!data.data.length) {
+          projectsList.innerHTML = '<div class="col-12 text-center text-muted py-5">No projects found.</div>';
+          return;
+        }
+        projectsList.innerHTML = data.data.map(project => `
+          <div class="col-md-6 col-lg-4">
+            <div class="card project-card shadow-sm h-100 position-relative">
+              <div class="card-body">
+                <span class="badge bg-${getStatusColor(project.status)} status-badge text-capitalize">${project.status.replace('_', ' ')}</span>
+                <h5 class="card-title">${project.title}</h5>
+                <p class="text-muted mb-2">Client: ${project.client?.name || 'Unknown'}</p>
+                <p class="card-text">${project.description}</p>
+                <div class="mb-3">
+                  ${(project.requiredSkills || []).map(skill => `
+                    <span class="badge bg-info skill-badge">${skill}</span>
+                  `).join('')}
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <span class="badge bg-${getComplexityColor(project.complexity)}">${project.complexity}</span>
+                    <small class="text-muted d-block">${project.category}</small>
+                  </div>
+                  <div class="text-end">
+                    <div class="fw-bold">$${(project.paymentAmount || 0).toLocaleString()}</div>
+                    <small class="text-muted">${project.paymentMethod}</small>
+                  </div>
+                </div>
+              </div>
+              <div class="card-footer bg-transparent d-flex justify-content-between align-items-center card-actions">
+                <small class="text-muted">Due: ${project.deadline ? new Date(project.deadline).toLocaleDateString() : 'N/A'}</small>
+                <div>
+                  <button class="btn btn-sm btn-outline-primary btn-edit-project" data-project='${JSON.stringify({ _id: project._id, title: project.title, paymentAmount: project.paymentAmount })}' title="Edit"><i class="fas fa-edit"></i></button>
+                  <button class="btn btn-sm btn-outline-warning btn-status-project" data-id="${project._id}" data-status="in-progress" title="Set In Progress"><i class="fas fa-play"></i></button>
+                  <button class="btn btn-sm btn-outline-success btn-status-project" data-id="${project._id}" data-status="completed" title="Set Completed"><i class="fas fa-check"></i></button>
+                  <button class="btn btn-sm btn-outline-danger btn-delete-project" data-id="${project._id}" title="Delete"><i class="fas fa-trash"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+    } catch (error) {
+      console.error('Error loading projects:', error);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    loadProjects();
+    // Delegate all project actions
+    document.getElementById('projectsList').addEventListener('click', function(e) {
+      // Edit
+      if (e.target.closest('.btn-edit-project')) {
+        const btn = e.target.closest('.btn-edit-project');
+        const project = JSON.parse(btn.getAttribute('data-project'));
+        document.getElementById('editProjectId').value = project._id;
+        document.getElementById('editProjectTitle').value = project.title;
+        document.getElementById('editProjectPayment').value = project.paymentAmount;
+        new bootstrap.Modal(document.getElementById('editProjectModal')).show();
+      }
+      // Status change
+      if (e.target.closest('.btn-status-project')) {
+        const btn = e.target.closest('.btn-status-project');
+        statusProjectId = btn.getAttribute('data-id');
+        statusAction = btn.getAttribute('data-status');
+        document.getElementById('statusChangeMsg').textContent = `Are you sure you want to change the status to "${statusAction.replace('_', ' ')}"?`;
+        new bootstrap.Modal(document.getElementById('confirmStatusModal')).show();
+      }
+      // Delete
+      if (e.target.closest('.btn-delete-project')) {
+        deleteProjectId = e.target.closest('.btn-delete-project').getAttribute('data-id');
+        new bootstrap.Modal(document.getElementById('confirmDeleteModal')).show();
+      }
+    });
+
+    // Save changes from edit modal
+    document.getElementById('saveProjectBtn').addEventListener('click', function() {
+      const id = document.getElementById('editProjectId').value;
+      const title = document.getElementById('editProjectTitle').value;
+      const paymentAmount = document.getElementById('editProjectPayment').value;
+      fetch(`/admin/api/projects/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, paymentAmount })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(document.getElementById('editProjectModal')).hide();
+          loadProjects();
+        } else {
+          alert('Failed to update project');
+        }
+      });
+    });
+
+    // Confirm status change
+    document.getElementById('confirmStatusBtn').addEventListener('click', function() {
+      if (!statusProjectId || !statusAction) return;
+      fetch(`/admin/api/projects/${statusProjectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: statusAction })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(document.getElementById('confirmStatusModal')).hide();
+          loadProjects();
+        } else {
+          alert('Failed to update status');
+        }
+      });
+    });
+
+    // Confirm delete
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+      if (!deleteProjectId) return;
+      fetch(`/admin/as/${deleteProjectId}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
+            loadProjects();
+          } else {
+            alert('Failed to delete project');
+          }
+        });
+    });
+  });
+</script> 

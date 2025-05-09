@@ -1,0 +1,51 @@
+<%- contentFor('body') %>
+<style>
+  .client-card {
+    transition: transform 0.2s;
+  }
+  .client-card:hover {
+    transform: translateY(-5px);
+  }
+</style>
+
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Clients Management</h2>
+  </div>
+
+  <% if (typeof clients !== 'undefined' && clients.length > 0) { %>
+    <div class="row g-4">
+      <% clients.forEach(client => { %>
+        <div class="col-md-6 col-lg-4">
+          <div class="card client-card shadow-sm h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <h5 class="card-title mb-0"><%= client.name %></h5>
+                <span class="badge bg-<%= client.status === 'Active' ? 'success' : 'secondary' %>"><%= client.status %></span>
+              </div>
+              <p class="text-muted mb-2"><%= client.type || '' %></p>
+              <% if (client.companyName) { %>
+                <p class="text-muted mb-2"><%= client.companyName %></p>
+              <% } %>
+              <div class="mb-3">
+                <p class="mb-1"><i class="fas fa-envelope me-2"></i><%= client.email %></p>
+                <p class="mb-1"><i class="fas fa-phone me-2"></i><%= client.phone %></p>
+                <p class="mb-0"><i class="fas fa-map-marker-alt me-2"></i><%= client.address || '' %></p>
+              </div>
+              <% if (client.notes) { %>
+                <p class="card-text"><small class="text-muted"><%= client.notes %></small></p>
+              <% } %>
+            </div>
+            <div class="card-footer bg-transparent">
+              <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">Created: <%= client.createdAt ? new Date(client.createdAt).toLocaleDateString() : '' %></small>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <div class="text-center text-muted py-5">No clients found.</div>
+  <% } %>
+</div>
