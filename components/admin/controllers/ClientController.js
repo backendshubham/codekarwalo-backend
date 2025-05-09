@@ -30,7 +30,19 @@ const addClient = async (req, res) => {
 // Client Management APIs
 const getAllClients = async (req, res) => {
   try {
-    const clients = await Client.find().sort({ createdAt: -1 });
+    const { search, status } = req.query;
+    console.log(status);
+    console.log(search);
+    const filter = search ? {
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } }
+      ]
+    } : {};
+    if (status) filter.status = status;
+    console.log(filter);
+    const clients = await Client.find(filter).sort({ createdAt: -1 });
     res.json({
       success: true,
       data: clients
