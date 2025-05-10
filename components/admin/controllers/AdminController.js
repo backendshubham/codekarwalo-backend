@@ -33,18 +33,33 @@ const login = async (req, res) => {
 
 const getDashboard = async (req, res) => {
   try {
-    const [stats, activities, projects] = await Promise.all([
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const [stats, activityData, clientsToday, projectsToday, engineersToday] = await Promise.all([
       getDashboardStats(),
       getRecentActivities(),
-      getRecentProjects()
+      Client.countDocuments({ createdAt: { $gte: today } }),
+      Project.countDocuments({ createdAt: { $gte: today } }),
+      Engineer.countDocuments({ createdAt: { $gte: today } })
     ]);
-
+    const todaysActivities = activityData.activities;
+    const todaysActivityTypeCounts = activityData.typeCounts;
+    const pendingProjects = stats.pendingProjectsList || [];
+    const activeProjects = stats.activeProjectsList || [];
+    const todayCounts = {
+      clients: clientsToday,
+      projects: projectsToday,
+      engineers: engineersToday
+    };
     res.render('admin/dashboard', {
       title: 'Dashboard',
       user: req.session.adminId,
       stats,
-      activities,
-      projects
+      todaysActivities,
+      todaysActivityTypeCounts,
+      todayCounts,
+      pendingProjects,
+      activeProjects
     });
   } catch (error) {
     console.error(error);
@@ -238,17 +253,27 @@ const getRecentActivities = async () => {
 
   const recentActivities = await Activity.find({ createdAt: { $gte: today } })
     .sort({ createdAt: -1 })
-    .limit(5)
+    .limit(50)
     .lean();
 
-  return recentActivities.map(a => ({
-    title: a.title,
-    description: a.description,
-    time: a.createdAt.toLocaleTimeString(),
-    type: a.type || 'info',
-    icon: a.icon || 'info-circle',
-    date: 'today'
-  }));
+  // Count activity types
+  const typeCounts = {};
+  recentActivities.forEach(a => {
+    const type = a.type || 'info';
+    typeCounts[type] = (typeCounts[type] || 0) + 1;
+  });
+
+  return {
+    activities: recentActivities.map(a => ({
+      title: a.title,
+      description: a.description,
+      time: a.createdAt.toLocaleTimeString(),
+      type: a.type || 'info',
+      icon: a.icon || 'info-circle',
+      date: 'today'
+    })),
+    typeCounts
+  };
 };
 
 const getRecentProjects = async () => {

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const clientSchema = new mongoose.Schema({
   name: {
@@ -19,6 +20,11 @@ const clientSchema = new mongoose.Schema({
     trim: true,
     match: [/^[0-9+\-\s()]*$/, 'Please enter a valid phone number']
   },
+  password: {
+    type: String,
+    required: [true, 'Password is required'],
+    minlength: [6, 'Password must be at least 6 characters']
+  },
   status: {
     type: String,
     enum: ['active', 'inactive'],
@@ -28,8 +34,28 @@ const clientSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Hash password before saving
+clientSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Compare password
+clientSchema.methods.comparePassword = async function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Hide password in responses
 clientSchema.methods.getPublicProfile = function () {
-  return this.toObject();
+  const client = this.toObject();
+  delete client.password;
+  return client;
 };
 
 module.exports = mongoose.model('clients', clientSchema);

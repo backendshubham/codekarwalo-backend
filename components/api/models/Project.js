@@ -22,6 +22,7 @@ const projectSchema = new mongoose.Schema({
     enum: [
       'Software Development',
       'Web Development',
+      'Mobile Development',
       'Graphic Design',
       'Data Science',
       'UI/UX Design',
@@ -34,16 +35,7 @@ const projectSchema = new mongoose.Schema({
     required: [true, 'Project deadline is required']
   },
   requiredSkills: [{
-    type: String,
-    enum: [
-      'Frontend Development',
-      'Backend Development',
-      'UI/UX Design',
-      'Data Analysis',
-      'Mobile Development',
-      'DevOps',
-      'Other'
-    ]
+    type: String
   }],
   complexity: {
     type: String,
@@ -70,7 +62,7 @@ const projectSchema = new mongoose.Schema({
   },
   assignedEngineers: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Engineer'
+    ref: 'engineers'
   }]
 }, {
   timestamps: true

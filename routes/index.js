@@ -3,13 +3,13 @@ const router = express.Router();
 
 // Import route modules
 const adminRoutes = require('../components/admin/routes/adminRoutes');
-const engineerRoutes = require('../components/api/routes/engineerRoutes');
-const clientRoutes = require('../components/api/routes/clientRoutes');
+const websiteClientRouter = require('../components/api/routes/websiteClientRoutes');
+const websiteEngineerRouter = require('../components/api/routes/websiteEngineerRoutes');
 
 // Mount routes
 router.use('/admin', adminRoutes);
-// router.use('/admin/engineers', engineerRoutes);
-// router.use('/admin/clients', clientRoutes);
+router.use('/api/clients', websiteClientRouter);
+router.use('/api/engineers', websiteEngineerRouter);
 
 // 404 handler
 router.use((req, res) => {

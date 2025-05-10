@@ -112,6 +112,82 @@
     <% }); %>
   </div>
 
+  <!-- Today's Activity Timeline and Pie Chart -->
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">Today's Activity</h5>
+        </div>
+        <div class="card-body">
+          <% if (todaysActivities && todaysActivities.length > 0) { %>
+            <div class="timeline" style="max-height:500px; overflow-y:auto;">
+              <% todaysActivities.forEach(activity => { %>
+                <div class="timeline-item">
+                  <span class="timeline-icon bg-<%= activity.type %>-subtle">
+                    <i class="fas fa-<%= activity.icon %> text-<%= activity.type %>"></i>
+                  </span>
+                  <div class="timeline-content ms-4">
+                    <div class="fw-bold"><%= activity.title %></div>
+                    <div class="text-muted small"><%= activity.description %></div>
+                    <div class="text-muted small"><i class="far fa-clock me-1"></i><%= activity.time %></div>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
+          <% } else { %>
+            <div class="text-center text-muted py-4">No activity for today.</div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">Today's Registrations</h5>
+        </div>
+        <div class="card-body d-flex flex-column align-items-center justify-content-center">
+          <canvas id="todayPieChart" width="250" height="250"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Today's Registrations Pie Chart
+      const todayCounts = JSON.parse('<%- JSON.stringify(todayCounts || {}) %>');
+      const regLabels = ['Clients', 'Projects', 'Engineers'];
+      const regData = [todayCounts.clients || 0, todayCounts.projects || 0, todayCounts.engineers || 0];
+      const regColors = ['#2563eb', '#f43f5e', '#10b981'];
+      if (document.getElementById('todayPieChart')) {
+        new Chart(document.getElementById('todayPieChart').getContext('2d'), {
+          type: 'pie',
+          data: {
+            labels: regLabels,
+            datasets: [{
+              data: regData,
+              backgroundColor: regColors,
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'bottom'
+              },
+              title: {
+                display: false
+              }
+            }
+          }
+        });
+      }
+    });
+  </script>
+
   <div class="row g-4">
     <!-- Active Projects -->
     <div class="col-md-6">
