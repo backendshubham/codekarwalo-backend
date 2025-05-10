@@ -6,6 +6,7 @@ const EngineerController = require('../controllers/EngineerController');
 const ProjectController = require('../controllers/ProjectController');
 const ActivityController = require('../controllers/ActivityController');
 const { isAuthenticated, isNotAuthenticated } = require('../middleware/auth');
+const Engineer = require('../../api/models/Engineer');
 
 // Auth routes
 router.get('/login', isNotAuthenticated, AdminController.getLoginPage);
@@ -23,6 +24,7 @@ router.get('/api/projects/:id', isAuthenticated, ProjectController.getProjectByI
 router.post('/api/projects', isAuthenticated, ProjectController.createProject);
 router.put('/api/projects/:id', isAuthenticated, ProjectController.updateProject);
 router.delete('/api/projects/:id', isAuthenticated, ProjectController.deleteProject);
+router.post('/api/projects/:id/assign-engineers', isAuthenticated, ProjectController.assignEngineers);
 
 // Client Management Routes
 router.get('/clients', isAuthenticated, ClientController.getClientsPage);
