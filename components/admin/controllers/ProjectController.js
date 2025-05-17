@@ -5,41 +5,80 @@ const Engineer = require('../../api/models/Engineer');
 // Get all projects
 const getAllProjects = async (req, res) => {
   try {
-    const { status, category, complexity, search } = req.query;
+    const { status, category, minBudget, maxBudget, search, page = 1, limit = 12 } = req.query;
+    
+    // Convert page and limit to numbers
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    
+    // Calculate skip value for pagination
+    const skip = (pageNum - 1) * limitNum;
+    
     const filter = {};
-    if (status) filter.status = status;
-    if (category) filter.category = category;
-    if (complexity) filter.complexity = complexity;
-    if (search) filter.title = { $regex: search, $options: 'i' };
+    
+    // Status filter
+    if (status) {
+      filter.status = status;
+    }
+    
+    // Category filter
+    if (category) {
+      filter.category = category;
+    }
+    
+    // Budget range filter
+    if (minBudget || maxBudget) {
+      filter.paymentAmount = {};
+      if (minBudget) {
+        filter.paymentAmount.$gte = Number(minBudget);
+      }
+      if (maxBudget) {
+        filter.paymentAmount.$lte = Number(maxBudget);
+      }
+    }
+    
+    // Search filter
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
 
+    // Get total count for pagination info
+    const total = await Project.countDocuments(filter);
+    
+    // Get paginated projects
     const projects = await Project.find(filter)
       .populate('client_id', 'name email')
       .populate('assignedEngineers', 'name email')
       .sort({ createdAt: -1 })
-      .lean();
+      .skip(skip)
+      .limit(limitNum);
 
-    const clientIds = [...new Set(projects.map(p => p.client_id?._id?.toString()).filter(Boolean))];
-    const clients = await Client.find({ _id: { $in: clientIds } }).lean();
-    const clientMap = {};
-    clients.forEach(client => {
-      clientMap[client._id.toString()] = client;
-    });
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPrevPage = pageNum > 1;
 
-    const projectsWithClient = projects.map(project => ({
-      ...project,
-      client: clientMap[project.client_id?._id?.toString()] || null,
-      client_id: undefined // Remove the original client_id field
-    }));
-
-    res.json({
+    return res.json({
       success: true,
-      data: projectsWithClient
+      data: projects,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limitNum,
+        hasNextPage,
+        hasPrevPage
+      }
     });
-  } catch (error) {
-    console.error('Error in getAllProjects:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching projects'
+  } catch (err) {
+    console.error('Error in getAllProjects:', err);
+    return res.status(500).json({ 
+      success: false, 
+      data: [], 
+      error: 'Error loading projects' 
     });
   }
 };
@@ -50,18 +89,26 @@ const getProjectById = async (req, res) => {
     const project = await Project.findById(req.params.id)
       .populate('client_id', 'name email')
       .populate('assignedEngineers', 'name email');
+      
     if (!project) {
       return res.status(404).json({
         success: false,
         message: 'Project not found'
       });
     }
+    
     res.json({
       success: true,
       data: project
     });
   } catch (error) {
     console.error('Error in getProjectById:', error);
+    if (error.name === 'CastError') {
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid project ID'
+      });
+    }
     res.status(500).json({
       success: false,
       message: 'Error fetching project'
@@ -84,6 +131,8 @@ const createProject = async (req, res) => {
       paymentMethod,
       paymentAmount
     } = req.body;
+
+    // Validate client exists
     const client = await Client.findById(client_id);
     if (!client) {
       return res.status(404).json({
@@ -91,20 +140,28 @@ const createProject = async (req, res) => {
         message: 'Client not found'
       });
     }
+
+    // Create new project
     const project = new Project({
       client_id,
       title,
       description,
       category,
       deadline,
-      requiredSkills,
+      requiredSkills: Array.isArray(requiredSkills) ? requiredSkills : [requiredSkills],
       complexity,
       additionalRequirements,
       paymentMethod,
       paymentAmount,
       status: 'pending'
     });
+
     await project.save();
+
+    // Populate client and engineers before sending response
+    await project.populate('client_id', 'name email');
+    await project.populate('assignedEngineers', 'name email');
+
     res.status(201).json({
       success: true,
       data: project
@@ -133,28 +190,47 @@ const updateProject = async (req, res) => {
       paymentAmount,
       status
     } = req.body;
+
+    const updateData = {
+      title,
+      description,
+      category,
+      deadline,
+      requiredSkills: Array.isArray(requiredSkills) ? requiredSkills : [requiredSkills],
+      complexity,
+      additionalRequirements,
+      paymentMethod: paymentMethod || 'Hourly', // Set default payment method if not provided
+      paymentAmount,
+      status
+    };
+
+    // Remove undefined and empty string fields
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined || updateData[key] === '') {
+        delete updateData[key];
+      }
+    });
+
+    // If paymentMethod was removed, set it back to the default
+    if (!updateData.paymentMethod) {
+      updateData.paymentMethod = 'Hourly';
+    }
+
     const project = await Project.findByIdAndUpdate(
       req.params.id,
-      {
-        title,
-        description,
-        category,
-        deadline,
-        requiredSkills,
-        complexity,
-        additionalRequirements,
-        paymentMethod,
-        paymentAmount,
-        status
-      },
+      updateData,
       { new: true, runValidators: true }
-    );
+    )
+    .populate('client_id', 'name email')
+    .populate('assignedEngineers', 'name email');
+
     if (!project) {
       return res.status(404).json({
         success: false,
         message: 'Project not found'
       });
     }
+
     res.json({
       success: true,
       data: project
@@ -163,7 +239,7 @@ const updateProject = async (req, res) => {
     console.error('Error in updateProject:', error);
     res.status(500).json({
       success: false,
-      message: 'Error updating project'
+      message: error.message || 'Error updating project'
     });
   }
 };
@@ -172,12 +248,14 @@ const updateProject = async (req, res) => {
 const deleteProject = async (req, res) => {
   try {
     const project = await Project.findByIdAndDelete(req.params.id);
+    
     if (!project) {
       return res.status(404).json({
         success: false,
         message: 'Project not found'
       });
     }
+
     res.json({
       success: true,
       message: 'Project deleted successfully'
@@ -191,33 +269,55 @@ const deleteProject = async (req, res) => {
   }
 };
 
-// Assign one or more engineers to a project (admin side)
+// Assign engineers to a project
 const assignEngineers = async (req, res) => {
   try {
-    const { id } = req.params; // project id
-    const { engineers } = req.body; // array of engineer IDs
-    console.log( req.body);
+    const { id } = req.params;
+    const { engineers } = req.body;
+
     if (!Array.isArray(engineers) || engineers.length === 0) {
-      return res.status(400).json({ success: false, message: 'engineers must be a non-empty array.' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Engineers must be a non-empty array' 
+      });
+    }
+
+    // Validate all engineers exist
+    const engineersExist = await Engineer.find({ _id: { $in: engineers } });
+    if (engineersExist.length !== engineers.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'One or more engineers not found'
+      });
     }
 
     const project = await Project.findById(id);
     if (!project) {
-      return res.status(404).json({ success: false, message: 'Project not found' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Project not found' 
+      });
     }
 
-    // Add unique engineer IDs (avoid duplicates)
-    project.assignedEngineers = Array.from(new Set([
-      ...project.assignedEngineers.map(e => e.toString()),
-      ...engineers
-    ]));
+    // Replace the entire assignedEngineers array with the new selection
+    project.assignedEngineers = engineers;
 
     await project.save();
 
-    res.json({ success: true, data: project });
+    // Populate the updated project data
+    await project.populate('client_id', 'name email');
+    await project.populate('assignedEngineers', 'name email');
+
+    res.json({ 
+      success: true, 
+      data: project 
+    });
   } catch (error) {
     console.error('Error in assignEngineers:', error);
-    res.status(500).json({ success: false, message: 'Error assigning engineers' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error assigning engineers' 
+    });
   }
 };
 

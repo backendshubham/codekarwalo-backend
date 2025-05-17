@@ -1,4 +1,5 @@
 const Engineer = require('../../api/models/Engineer');
+const Project = require('../../api/models/Project');
 
 const getEngineersPage = async (req, res) => {
   try {
@@ -11,7 +12,14 @@ const getEngineersPage = async (req, res) => {
 
 const getAllEngineers = async (req, res) => {
   try {
-    const { status, designation, specialization, minExperience, maxExperience, search } = req.query;
+    const { status, designation, specialization, minExperience, maxExperience, search, page = 1, limit = 12 } = req.query;
+    
+    // Convert page and limit to numbers
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    
+    // Calculate skip value for pagination
+    const skip = (pageNum - 1) * limitNum;
     
     const filter = {};
     
@@ -48,12 +56,86 @@ const getAllEngineers = async (req, res) => {
         { email: { $regex: search, $options: 'i' } }
       ];
     }
+
+    // Get total count for pagination info
+    const total = await Engineer.countDocuments(filter);
     
-    const engineers = await Engineer.find(filter).sort({ createdAt: -1 });
-    return res.json({ data: engineers });
+    // Get paginated engineers
+    const engineers = await Engineer.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPrevPage = pageNum > 1;
+
+    return res.json({
+      success: true,
+      data: engineers,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limitNum,
+        hasNextPage,
+        hasPrevPage
+      }
+    });
   } catch (err) {
     console.error('Error in getAllEngineers:', err);
-    return res.status(500).json({ data: [], error: 'Error loading engineers' });
+    return res.status(500).json({ 
+      success: false, 
+      data: [], 
+      error: 'Error loading engineers' 
+    });
+  }
+};
+
+const getEngineerById = async (req, res) => {
+  try {
+    const engineer = await Engineer.findById(req.params.id);
+    if (!engineer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Engineer not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: engineer
+    });
+  } catch (error) {
+    console.error('Error in getEngineerById:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching engineer'
+    });
+  }
+};
+
+const getEngineerProjects = async (req, res) => {
+  try {
+    const engineerId = req.params.id;
+    const total = await Project.countDocuments({ assignedEngineers: engineerId });
+    const active = await Project.countDocuments({ assignedEngineers: engineerId, status: 'in-progress' });
+    const completed = await Project.countDocuments({ assignedEngineers: engineerId, status: 'completed' });
+
+    console.log({
+      engineerId,
+      total,
+      active,
+      completed
+    });
+
+    res.json({
+      success: true,
+      data: { total, active, completed }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching project stats' });
   }
 };
 
@@ -173,12 +255,76 @@ const deleteEngineer = async (req, res) => {
   }
 };
 
+const getEarningsThisMonth = async (req, res) => {
+  try {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const result = await Project.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: firstDay, $lte: lastDay },
+          status: 'completed' // Only count completed projects as earnings
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$paymentAmount' }
+        }
+      }
+    ]);
+    const total = result[0]?.total || 0;
+    res.json({ success: true, total });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching earnings' });
+  }
+};
+
+const getTopEngineers = async (req, res) => {
+  try {
+    const top = await Project.aggregate([
+      { $match: { status: 'completed' } },
+      { $unwind: '$assignedEngineers' },
+      { $group: { _id: '$assignedEngineers', completedProjects: { $sum: 1 } } },
+      { $sort: { completedProjects: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'engineers',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'engineer'
+        }
+      },
+      { $unwind: '$engineer' },
+      {
+        $project: {
+          _id: 0,
+          engineerId: '$engineer._id',
+          name: '$engineer.name',
+          email: '$engineer.email',
+          completedProjects: 1
+        }
+      }
+    ]);
+    res.json({ success: true, data: top });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching top engineers' });
+  }
+};
+
 module.exports = {
   getEngineersPage,
   getAllEngineers,
+  getEngineerById,
+  getEngineerProjects,
   createEngineer,
   updateEngineer,
   setActive,
   setInactive,
-  deleteEngineer
+  deleteEngineer,
+  getEarningsThisMonth,
+  getTopEngineers
 };

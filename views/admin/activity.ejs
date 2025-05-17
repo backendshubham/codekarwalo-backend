@@ -11,6 +11,14 @@
   <div class="row" id="activityList">
     <!-- Activity cards will be rendered here -->
   </div>
+
+  <!-- Load More Button -->
+  <div class="text-center mt-4" id="loadMoreContainer" style="display: none;">
+    <button class="btn btn-primary" id="loadMoreBtn">
+      <i class="fas fa-spinner fa-spin me-2" style="display: none;"></i>
+      Load More
+    </button>
+  </div>
 </div>
 
 <style>
@@ -43,36 +51,37 @@
 </style>
 
 <script>
-function getTypeColor(type) {
-  switch (type) {
-    case 'primary': return 'bg-primary';
-    case 'success': return 'bg-success';
-    case 'warning': return 'bg-warning';
-    case 'danger': return 'bg-danger';
-    case 'info': return 'bg-info';
-    case 'client': return 'bg-client';
-    case 'project': return 'bg-project';
-    case 'task': return 'bg-task';
-    case 'engineer': return 'bg-engineer';
-    case 'admin': return 'bg-admin';
-    case 'other': return 'bg-other';
-    default: return 'bg-secondary';
-  }
-}
-
-async function loadActivities() {
-  try {
-    const search = document.getElementById('searchInput').value;
-    const params = new URLSearchParams();
-    if (search) params.append('search', search);
-    const response = await fetch('/admin/api/activities?' + params.toString());
-    const data = await response.json();
-    const activityList = document.getElementById('activityList');
-    if (!data.success || !data.data.length) {
-      activityList.innerHTML = '<div class="text-center text-muted py-5">No activities found.</div>';
-      return;
+  let currentPage = 1;
+  const limit = 12;
+  let hasMoreData = true;
+  let isLoading = false;
+  
+  function getTypeColor(type) {
+    switch (type) {
+      case 'primary': return 'bg-primary';
+      case 'success': return 'bg-success';
+      case 'warning': return 'bg-warning';
+      case 'danger': return 'bg-danger';
+      case 'info': return 'bg-info';
+      case 'client': return 'bg-client';
+      case 'project': return 'bg-project';
+      case 'task': return 'bg-task';
+      case 'engineer': return 'bg-engineer';
+      case 'admin': return 'bg-admin';
+      case 'other': return 'bg-other';
+      default: return 'bg-secondary';
     }
-    activityList.innerHTML = data.data.map(activity => `
+  }
+  
+  function createActivityCard(activity) {
+    let dateStr = '';
+    if (activity.createdAt) {
+      const d = new Date(activity.createdAt);
+      dateStr = isNaN(d) ? 'Unknown' : d.toLocaleString();
+    } else {
+      dateStr = 'Unknown';
+    }
+    return `
       <div class="col-md-3 col-sm-6 mb-4 d-flex">
         <div class="card activity-card flex-fill">
           <div class="card-body d-flex align-items-center">
@@ -85,26 +94,75 @@ async function loadActivities() {
               <p class="mb-1">${activity.description}</p>
               <div class="activity-meta">
                 <span><i class="fas fa-user me-1"></i>${activity.user?.name || 'System'}</span>
-                <span class="ms-3"><i class="fas fa-clock me-1"></i>${new Date(activity.createdAt).toLocaleString()}</span>
+                <span class="ms-3"><i class="fas fa-clock me-1"></i>${dateStr}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
-    `).join('');
-  } catch (error) {
-    console.error('Error loading activities:', error);
-    toast.error('Failed to load activities');
+    `;
   }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  loadActivities();
-  document.getElementById('searchInput').addEventListener('input', function() {
-    clearTimeout(window.searchTimeout);
-    window.searchTimeout = setTimeout(loadActivities, 300);
+  
+  async function loadActivities(reset = false) {
+    if (isLoading) return;
+    isLoading = true;
+  
+    if (reset) {
+      currentPage = 1;
+      hasMoreData = true;
+      document.getElementById('activityList').innerHTML = '';
+    }
+  
+    const search = document.getElementById('searchInput')?.value || '';
+    const params = new URLSearchParams({
+      page: currentPage,
+      limit: limit
+    });
+    if (search) params.append('search', search);
+  
+    const response = await fetch('/admin/api/activity-log?' + params.toString());
+    const data = await response.json();
+    const activityList = document.getElementById('activityList');
+  
+    if (!data.success || !data.data.length) {
+      if (reset) {
+        activityList.innerHTML = '<div class="text-center text-muted py-5">No activities found.</div>';
+      }
+      hasMoreData = false;
+      document.getElementById('loadMoreContainer').style.display = 'none';
+      isLoading = false;
+      return;
+    }
+  
+    // Append new activities
+    activityList.innerHTML += data.data.map(createActivityCard).join('');
+  
+    // If less than limit, no more data
+    hasMoreData = data.data.length === limit;
+    document.getElementById('loadMoreContainer').style.display = hasMoreData ? 'block' : 'none';
+  
+    isLoading = false;
+  }
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    loadActivities(true);
+  
+    document.getElementById('loadMoreBtn').addEventListener('click', async function() {
+      if (!hasMoreData || isLoading) return;
+      currentPage++;
+      await loadActivities(false);
+    });
+  
+    // Optional: Add search input debounce
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', function() {
+        clearTimeout(window.searchTimeout);
+        window.searchTimeout = setTimeout(() => loadActivities(true), 300);
+      });
+    }
   });
-});
-</script>
+  </script>
 
+<%- include('partials/loader') %>
 <%- include('partials/toaster') %> 

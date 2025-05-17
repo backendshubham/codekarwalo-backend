@@ -50,6 +50,14 @@
   <div id="engineersList">
     <!-- Engineers will be rendered here dynamically -->
   </div>
+  <div id="loaderContainer" class="loader-container">
+    <div class="loader"></div>
+  </div>
+  <div class="text-center mt-4" id="loadMoreContainer">
+    <button class="btn btn-outline-primary" id="loadMoreBtn" style="display: none;">
+      Load More
+    </button>
+  </div>
 </div>
 
 <!-- Edit Engineer Modal -->
@@ -123,6 +131,83 @@
   </div>
 </div>
 
+<!-- Engineer Details Modal -->
+<div class="modal fade" id="engineerDetailsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Engineer Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-4 text-center mb-4">
+            <div class="engineer-avatar mb-3">
+              <i class="fas fa-user-circle fa-5x text-primary"></i>
+            </div>
+            <h4 id="detailEngineerName" class="mb-2"></h4>
+            <span id="detailEngineerStatus" class="badge mb-3"></span>
+          </div>
+          <div class="col-md-8">
+            <div class="card mb-3">
+              <div class="card-body">
+                <h6 class="card-subtitle mb-3 text-muted">Contact Information</h6>
+                <div class="mb-3">
+                  <label class="text-muted">Email</label>
+                  <p id="detailEngineerEmail" class="mb-2"></p>
+                </div>
+                <div class="mb-3">
+                  <label class="text-muted">Designation</label>
+                  <p id="detailEngineerDesignation" class="mb-2"></p>
+                </div>
+                <div class="mb-3">
+                  <label class="text-muted">Specialization</label>
+                  <p id="detailEngineerSpecialization" class="mb-2"></p>
+                </div>
+                <div class="mb-3">
+                  <label class="text-muted">Experience</label>
+                  <p id="detailEngineerExperience" class="mb-2"></p>
+                </div>
+                <div class="mb-3">
+                  <label class="text-muted">Skills</label>
+                  <div id="detailEngineerSkills" class="d-flex flex-wrap gap-2"></div>
+                </div>
+                <div class="mb-3">
+                  <label class="text-muted">Bio</label>
+                  <p id="detailEngineerBio" class="mb-2"></p>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-subtitle mb-3 text-muted">Projects Overview</h6>
+                <div class="row text-center">
+                  <div class="col-4">
+                    <h3 id="detailTotalProjects" class="mb-1">0</h3>
+                    <small class="text-muted">Total Projects</small>
+                  </div>
+                  <div class="col-4">
+                    <h3 id="detailActiveProjects" class="mb-1">0</h3>
+                    <small class="text-muted">Active Projects</small>
+                  </div>
+                  <div class="col-4">
+                    <h3 id="detailCompletedProjects" class="mb-1">0</h3>
+                    <small class="text-muted">Completed</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="editFromDetailsBtn">Edit Engineer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <style>
   .engineer-card {
     transition: transform 0.2s;
@@ -147,12 +232,33 @@
     font-size: 0.95rem;
     border-radius: 6px;
   }
+  .loader-container {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+  }
+  .loader {
+    width: 48px;
+    height: 48px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #2563eb;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 </style>
 
 <script>
   let deleteEngineerId = null;
   let statusEngineerId = null;
   let statusAction = null;
+  let currentPage = 1;
+  let hasMorePages = false;
+  let selectedEngineer = null;
 
   function confirmDeleteEngineer(id) {
     deleteEngineerId = id;
@@ -240,15 +346,23 @@
       .catch(() => toast.error('Failed to update engineer'));
   });
 
-  async function loadEngineers() {
+  async function loadEngineers(loadMore = false) {
+    const engineersList = document.getElementById('engineersList');
+    
     try {
+      // Show loader
+      showLoader();
+      if (!loadMore) {
+        engineersList.innerHTML = '';
+        currentPage = 1;
+      }
+
       const status = document.getElementById('statusFilter').value;
       const designation = document.getElementById('designationFilter').value;
       const specialization = document.getElementById('specializationFilter').value;
       const minExp = document.getElementById('minExperience').value;
       const maxExp = document.getElementById('maxExperience').value;
       const search = document.getElementById('searchInput').value;
-
 
       const params = new URLSearchParams();
       if (status) params.append('status', status);
@@ -257,72 +371,164 @@
       if (minExp) params.append('minExperience', minExp);
       if (maxExp) params.append('maxExperience', maxExp);
       if (search) params.append('search', search);
+      params.append('page', currentPage);
+      params.append('limit', 12);
 
       const response = await fetch('/admin/api/engineers?' + params.toString());
       const data = await response.json();
             
-      const engineersList = document.getElementById('engineersList');
+      // Hide loader
+      hideLoader();
+
       if (!data.data || !data.data.length) {
-        engineersList.innerHTML = '<div class="text-center text-muted py-5">No engineers found.</div>';
+        if (!loadMore) {
+          engineersList.innerHTML = '<div class="text-center text-muted py-5">No engineers found.</div>';
+        }
+        document.getElementById('loadMoreBtn').style.display = 'none';
         return;
       }
-      engineersList.innerHTML = `
-        <div class="row g-4">
-          ${data.data.map(engineer => `
-            <div class="col-md-6 col-lg-4">
-              <div class="card engineer-card shadow-sm h-100">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h5 class="card-title mb-0">${engineer.name}</h5>
-                    <span class="badge bg-${engineer.status === 'active' ? 'success' : 'secondary'}">${engineer.status}</span>
-                  </div>
-                  <p class="mb-1"><i class="fas fa-envelope me-2"></i>${engineer.email}</p>
-                  ${engineer.designation ? `<p class="mb-1 text-muted"><i class="fas fa-briefcase me-2"></i>${engineer.designation}</p>` : ''}
-                  ${engineer.specialization ? `<p class="mb-1 text-muted"><i class="fas fa-code me-2"></i>${engineer.specialization}</p>` : ''}
-                  ${engineer.experience ? `<p class="mb-1 text-muted"><i class="fas fa-clock me-2"></i>${engineer.experience} years</p>` : ''}
-                  ${(engineer.skills && engineer.skills.length > 0) ? `
-                    <div class="mb-2">
-                      <small class="text-muted d-block mb-1"><i class="fas fa-tools me-2"></i>Skills:</small>
-                      ${engineer.skills.map(skill => `<span class="badge bg-info skill-badge">${skill}</span>`).join('')}
-                    </div>
-                  ` : ''}
-                  ${engineer.bio ? `<p class="card-text mt-2"><small class="text-muted"><i class="fas fa-info-circle me-2"></i>${engineer.bio}</small></p>` : ''}
+
+      const engineersHTML = data.data.map(engineer => `
+        <div class="col-md-6 col-lg-4">
+          <div class="card engineer-card shadow-sm h-100" style="cursor: pointer;" onclick="showEngineerDetails('${engineer._id}')">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <h5 class="card-title mb-0">${engineer.name}</h5>
+                <span class="badge bg-${engineer.status === 'active' ? 'success' : 'secondary'}">${engineer.status}</span>
+              </div>
+              <p class="mb-1"><i class="fas fa-envelope me-2"></i>${engineer.email}</p>
+              ${engineer.designation ? `<p class="mb-1 text-muted"><i class="fas fa-briefcase me-2"></i>${engineer.designation}</p>` : ''}
+              ${engineer.specialization ? `<p class="mb-1 text-muted"><i class="fas fa-code me-2"></i>${engineer.specialization}</p>` : ''}
+              ${engineer.experience ? `<p class="mb-1 text-muted"><i class="fas fa-clock me-2"></i>${engineer.experience} years</p>` : ''}
+              ${(engineer.skills && engineer.skills.length > 0) ? `
+                <div class="mb-2">
+                  <small class="text-muted d-block mb-1"><i class="fas fa-tools me-2"></i>Skills:</small>
+                  ${engineer.skills.map(skill => `<span class="badge bg-info skill-badge">${skill}</span>`).join('')}
                 </div>
-                <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
-                  <small class="text-muted">Joined: ${engineer.createdAt ? new Date(engineer.createdAt).toLocaleDateString() : ''}</small>
-                  <div class="card-actions">
-                    ${engineer.status === 'active' ? 
-                      `<button class="btn btn-sm btn-outline-warning btn-action" onclick="confirmStatusChange('${engineer._id}', 'deactivate')" title="Set inactive"><i class="fas fa-user-slash"></i></button>` : 
-                      `<button class="btn btn-sm btn-outline-success btn-action" onclick="confirmStatusChange('${engineer._id}', 'activate')" title="Set active"><i class="fas fa-user-check"></i></button>`
-                    }
-                    <button class="btn btn-sm btn-outline-primary btn-action" data-engineer='${JSON.stringify({ _id: engineer._id, name: engineer.name, designation: engineer.designation, experience: engineer.experience })}' onclick="handleEditBtnClick(this)" title="Edit"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-outline-danger btn-action" onclick="confirmDeleteEngineer('${engineer._id}')" title="Delete"><i class="fas fa-trash"></i></button>
-                  </div>
-                </div>
+              ` : ''}
+              ${engineer.bio ? `<p class="card-text mt-2"><small class="text-muted"><i class="fas fa-info-circle me-2"></i>${engineer.bio}</small></p>` : ''}
+            </div>
+            <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+              <small class="text-muted">Joined: ${engineer.createdAt ? new Date(engineer.createdAt).toLocaleDateString() : ''}</small>
+              <div class="card-actions">
+                ${engineer.status === 'active' ? 
+                  `<button class="btn btn-sm btn-outline-warning btn-action" onclick="event.stopPropagation(); confirmStatusChange('${engineer._id}', 'deactivate')" title="Set inactive"><i class="fas fa-user-slash"></i></button>` : 
+                  `<button class="btn btn-sm btn-outline-success btn-action" onclick="event.stopPropagation(); confirmStatusChange('${engineer._id}', 'activate')" title="Set active"><i class="fas fa-user-check"></i></button>`
+                }
+                <button class="btn btn-sm btn-outline-primary btn-action" data-engineer='${JSON.stringify({ _id: engineer._id, name: engineer.name, designation: engineer.designation, experience: engineer.experience })}' onclick="event.stopPropagation(); handleEditBtnClick(this)" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-outline-danger btn-action" onclick="event.stopPropagation(); confirmDeleteEngineer('${engineer._id}')" title="Delete"><i class="fas fa-trash"></i></button>
               </div>
             </div>
-          `).join('')}
+          </div>
         </div>
-      `;
+      `).join('');
+
+      if (loadMore) {
+        engineersList.innerHTML += engineersHTML;
+      } else {
+        engineersList.innerHTML = `<div class="row g-4">${engineersHTML}</div>`;
+      }
+
+      // Update load more button visibility
+      hasMorePages = data.pagination.hasNextPage;
+      document.getElementById('loadMoreBtn').style.display = hasMorePages ? 'inline-block' : 'none';
+
     } catch (error) {
       console.error('Error loading engineers:', error);
       toast.error('Failed to load engineers');
+      hideLoader();
     }
   }
 
-  // Add event listeners
-  document.getElementById('statusFilter').addEventListener('change', loadEngineers);
-  document.getElementById('designationFilter').addEventListener('change', loadEngineers);
-  document.getElementById('specializationFilter').addEventListener('change', loadEngineers);
-  document.getElementById('minExperience').addEventListener('input', loadEngineers);
-  document.getElementById('maxExperience').addEventListener('input', loadEngineers);
+  // Add load more button click handler
+  document.getElementById('loadMoreBtn').addEventListener('click', function() {
+    if (hasMorePages) {
+      currentPage++;
+      loadEngineers(true);
+    }
+  });
+
+  // Update existing event listeners to reset pagination
+  document.getElementById('statusFilter').addEventListener('change', () => loadEngineers(false));
+  document.getElementById('designationFilter').addEventListener('change', () => loadEngineers(false));
+  document.getElementById('specializationFilter').addEventListener('change', () => loadEngineers(false));
+  document.getElementById('minExperience').addEventListener('input', () => loadEngineers(false));
+  document.getElementById('maxExperience').addEventListener('input', () => loadEngineers(false));
   document.getElementById('searchInput').addEventListener('input', function() {
     clearTimeout(window.searchTimeout);
-    window.searchTimeout = setTimeout(loadEngineers, 300);
+    window.searchTimeout = setTimeout(() => loadEngineers(false), 300);
   });
 
   // Call loadEngineers() on page load
-  document.addEventListener('DOMContentLoaded', loadEngineers);
-  </script>
+  document.addEventListener('DOMContentLoaded', () => loadEngineers(false));
+
+  // Function to show engineer details modal
+  async function showEngineerDetails(engineerId) {
+    try {
+      showLoader();
+      const response = await fetch(`/admin/api/engineers/${engineerId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        const engineer = data.data;
+        selectedEngineer = engineer;
+        
+        // Basic Info
+        document.getElementById('detailEngineerName').textContent = engineer.name;
+        document.getElementById('detailEngineerStatus').textContent = engineer.status;
+        document.getElementById('detailEngineerStatus').className = `badge bg-${engineer.status === 'active' ? 'success' : 'secondary'}`;
+        document.getElementById('detailEngineerEmail').textContent = engineer.email;
+        document.getElementById('detailEngineerDesignation').textContent = engineer.designation || 'Not specified';
+        document.getElementById('detailEngineerSpecialization').textContent = engineer.specialization || 'Not specified';
+        document.getElementById('detailEngineerExperience').textContent = engineer.experience ? `${engineer.experience} years` : 'Not specified';
+        document.getElementById('detailEngineerBio').textContent = engineer.bio || 'No bio provided';
+        
+        // Skills
+        const skillsContainer = document.getElementById('detailEngineerSkills');
+        skillsContainer.innerHTML = '';
+        if (engineer.skills && engineer.skills.length > 0) {
+          engineer.skills.forEach(skill => {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-info';
+            badge.textContent = skill;
+            skillsContainer.appendChild(badge);
+          });
+        } else {
+          skillsContainer.innerHTML = '<span class="text-muted">No skills specified</span>';
+        }
+
+        // Fetch project statistics
+        const statsResponse = await fetch(`/admin/api/engineers/${engineerId}/projects`);
+        const statsData = await statsResponse.json();
+        
+        if (statsData.success) {
+          document.getElementById('detailTotalProjects').textContent = statsData.total || 0;
+          document.getElementById('detailActiveProjects').textContent = statsData.active || 0;
+          document.getElementById('detailCompletedProjects').textContent = statsData.completed || 0;
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('engineerDetailsModal'));
+        modal.show();
+      } else {
+        toast.error('Failed to load engineer details');
+      }
+    } catch (error) {
+      console.error('Error loading engineer details:', error);
+      toast.error('Failed to load engineer details');
+    } finally {
+      hideLoader();
+    }
+  }
+
+  // Add click handler for edit from details button
+  document.getElementById('editFromDetailsBtn').addEventListener('click', function() {
+    if (selectedEngineer) {
+      const modal = bootstrap.Modal.getInstance(document.getElementById('engineerDetailsModal'));
+      modal.hide();
+      openEditModal(selectedEngineer);
+    }
+  });
+</script>
 <%- include('partials/toaster') %>
+<%- include('partials/loader') %>
 

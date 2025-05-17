@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .error-container {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 90%;
+        }
+        .error-code {
+            font-size: 8rem;
+            font-weight: bold;
+            color: #dc3545;
+            line-height: 1;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .error-message {
+            font-size: 1.5rem;
+            color: #6c757d;
+            margin-bottom: 2rem;
+        }
+        .error-description {
+            color: #6c757d;
+            margin-bottom: 2rem;
+        }
+        .btn-home {
+            padding: 0.75rem 2rem;
+            font-size: 1.1rem;
+            margin: 0.5rem;
+        }
+        .btn-back {
+            padding: 0.75rem 2rem;
+            font-size: 1.1rem;
+            margin: 0.5rem;
+        }
+        .error-icon {
+            font-size: 5rem;
+            color: #dc3545;
+            margin-bottom: 1rem;
+        }
+        .navigation-links {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #dee2e6;
+        }
+        .navigation-links a {
+            color: #6c757d;
+            text-decoration: none;
+            margin: 0 1rem;
+            transition: color 0.3s ease;
+        }
+        .navigation-links a:hover {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">
+            <i class="fas fa-exclamation-circle"></i>
+        </div>
+        <div class="error-code">404</div>
+        <div class="error-message">Page Not Found</div>
+        <div class="error-description">
+            Oops! The page you're looking for doesn't exist or has been moved.
+        </div>
+        <div>
+            <a href="/" class="btn btn-primary btn-home">
+                <i class="fas fa-home me-2"></i>Go to Homepage
+            </a>
+            <button onclick="history.back()" class="btn btn-outline-secondary btn-back">
+                <i class="fas fa-arrow-left me-2"></i>Go Back
+            </button>
+        </div>
+        <div class="navigation-links">
+            <a href="/admin/dashboard"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
+            <a href="/admin/projects"><i class="fas fa-project-diagram me-1"></i>Projects</a>
+            <a href="/admin/clients"><i class="fas fa-users me-1"></i>Clients</a>
+            <a href="/admin/engineers"><i class="fas fa-code me-1"></i>Engineers</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
