@@ -1,5 +1,6 @@
 const Client = require('../../api/models/Client');
 const Activity = require('../models/Activity');
+const Project = require('../models/Project');
 
 const getClientsPage = (req, res) => {
   res.render('admin/clients');
@@ -30,9 +31,16 @@ const addClient = async (req, res) => {
 // Client Management APIs
 const getAllClients = async (req, res) => {
   try {
-    const { search, status } = req.query;
-    console.log(status);
-    console.log(search);
+    const { search, status, page = 1, limit = 12 } = req.query;
+    
+    // Convert page and limit to numbers
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    
+    // Calculate skip value for pagination
+    const skip = (pageNum - 1) * limitNum;
+
+    // Build search filter
     const filter = search ? {
       $or: [
         { name: { $regex: search, $options: 'i' } },
@@ -41,11 +49,32 @@ const getAllClients = async (req, res) => {
       ]
     } : {};
     if (status) filter.status = status;
-    console.log(filter);
-    const clients = await Client.find(filter).sort({ createdAt: -1 });
+
+    // Get total count for pagination info
+    const total = await Client.countDocuments(filter);
+
+    // Get paginated clients
+    const clients = await Client.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPrevPage = pageNum > 1;
+
     res.json({
       success: true,
-      data: clients
+      data: clients,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalItems: total,
+        itemsPerPage: limitNum,
+        hasNextPage,
+        hasPrevPage
+      }
     });
   } catch (error) {
     console.error('Error in getAllClients:', error);
@@ -75,6 +104,40 @@ const getClientById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching client'
+    });
+  }
+};
+
+const getClientProjects = async (req, res) => {
+  try {
+    const clientId = req.params.id;
+    
+    // Get total projects count
+    const total = await Project.countDocuments({ client_id: clientId });
+    
+    // Get active projects count
+    const active = await Project.countDocuments({ 
+      client_id: clientId,
+      status: 'active'
+    });
+    
+    // Get completed projects count
+    const completed = await Project.countDocuments({ 
+      client_id: clientId,
+      status: 'completed'
+    });
+
+    res.json({
+      success: true,
+      total,
+      active,
+      completed
+    });
+  } catch (error) {
+    console.error('Error in getClientProjects:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching client projects'
     });
   }
 };
@@ -238,6 +301,7 @@ module.exports = {
   addClient,
   getAllClients,
   getClientById,
+  getClientProjects,
   createClient,
   updateClient,
   deleteClient,

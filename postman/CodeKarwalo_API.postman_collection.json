@@ -1,0 +1,122 @@
+{
+	"info": {
+		"name": "CodeKarwalo API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Register Engineer",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "name",
+							"value": "Alice Johnson",
+							"type": "text"
+						},
+						{
+							"key": "email",
+							"value": "alice.johnson@example.com",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "Test@123",
+							"type": "text"
+						},
+						{
+							"key": "bio",
+							"value": "Experienced software engineer with expertise in full-stack development",
+							"type": "text"
+						},
+						{
+							"key": "skills",
+							"value": "JavaScript,Node.js,React,MongoDB",
+							"type": "text"
+						},
+						{
+							"key": "designation",
+							"value": "Senior Software Engineer",
+							"type": "text"
+						},
+						{
+							"key": "specialization",
+							"value": "Full Stack Development",
+							"type": "text"
+						},
+						{
+							"key": "experience",
+							"value": "5",
+							"type": "text"
+						},
+						{
+							"key": "status",
+							"value": "active",
+							"type": "text"
+						},
+						{
+							"key": "contact[phone]",
+							"value": "+1234567890",
+							"type": "text"
+						},
+						{
+							"key": "contact[address]",
+							"value": "123 Tech Street",
+							"type": "text"
+						},
+						{
+							"key": "contact[city]",
+							"value": "Tech City",
+							"type": "text"
+						},
+						{
+							"key": "contact[state]",
+							"value": "Tech State",
+							"type": "text"
+						},
+						{
+							"key": "contact[country]",
+							"value": "Tech Country",
+							"type": "text"
+						},
+						{
+							"key": "contact[zipCode]",
+							"value": "12345",
+							"type": "text"
+						},
+						{
+							"key": "socialLinks[github]",
+							"value": "https://github.com/alicejohnson",
+							"type": "text"
+						},
+						{
+							"key": "socialLinks[linkedin]",
+							"value": "https://linkedin.com/in/alicejohnson",
+							"type": "text"
+						},
+						{
+							"key": "termsAccepted",
+							"value": "true",
+							"type": "text"
+						},
+						{
+							"key": "resume",
+							"type": "file",
+							"src": "https://codekarwalo.s3.amazonaws.com/resumes/Alice_Johnson_resume_1747294169610.pdf"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/engineer/register",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "3000",
+					"path": ["api", "engineer", "register"]
+				}
+			}
+		}
+	]
+} 

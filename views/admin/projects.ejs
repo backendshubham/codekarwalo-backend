@@ -84,6 +84,14 @@
   <div class="row g-4" id="projectsList">
     <!-- Projects will be loaded here dynamically -->
   </div>
+  <div id="loaderContainer" class="loader-container">
+    <div class="loader"></div>
+  </div>
+  <div class="text-center mt-4" id="loadMoreContainer">
+    <button class="btn btn-outline-primary" id="loadMoreBtn" style="display: none;">
+      Load More
+    </button>
+  </div>
 </div>
 
 <!-- Edit Project Modal -->
@@ -102,8 +110,52 @@
             <input type="text" class="form-control" name="title" id="editProjectTitle" required>
           </div>
           <div class="mb-2">
-            <label class="form-label">Price</label>
+            <label class="form-label">Description</label>
+            <textarea class="form-control" name="description" id="editProjectDescription" rows="3"></textarea>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Category</label>
+            <select class="form-select" name="category" id="editProjectCategory">
+              <option value="">Select Category</option>
+              <option value="Software Development">Software Development</option>
+              <option value="Web Development">Web Development</option>
+              <option value="Graphic Design">Graphic Design</option>
+              <option value="Data Science">Data Science</option>
+              <option value="UI/UX Design">UI/UX Design</option>
+              <option value="Embedded Systems">Embedded Systems</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Complexity</label>
+            <select class="form-select" name="complexity" id="editProjectComplexity">
+              <option value="">Select Complexity</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Required Skills (comma-separated)</label>
+            <input type="text" class="form-control" name="requiredSkills" id="editProjectSkills" placeholder="e.g., JavaScript, React, Node.js">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Payment Amount</label>
             <input type="number" class="form-control" name="paymentAmount" id="editProjectPayment" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Payment Method</label>
+            <select class="form-select" name="paymentMethod" id="editProjectPaymentMethod">
+              <option value="">Select Payment Method</option>
+              <option value="Weekly">Weekly</option>
+              <option value="Hourly">Hourly</option>
+              <option value="Monthly">Monthly</option>
+              <option value="By Task">By Task</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Additional Requirements</label>
+            <textarea class="form-control" name="additionalRequirements" id="editProjectRequirements" rows="2"></textarea>
           </div>
         </form>
       </div>
@@ -185,11 +237,104 @@
   </div>
 </div>
 
+<!-- Project Details Modal -->
+<div class="modal fade" id="projectDetailsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Project Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-8">
+            <div class="card mb-3">
+              <div class="card-body">
+                <h4 id="detailProjectTitle" class="mb-3"></h4>
+                <div class="mb-3">
+                  <label class="text-muted">Description</label>
+                  <p id="detailProjectDescription" class="mb-2"></p>
+                </div>
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label class="text-muted">Category</label>
+                    <p id="detailProjectCategory" class="mb-2"></p>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="text-muted">Complexity</label>
+                    <p id="detailProjectComplexity" class="mb-2"></p>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label class="text-muted">Payment Amount</label>
+                    <p id="detailProjectPayment" class="mb-2"></p>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="text-muted">Payment Method</label>
+                    <p id="detailProjectPaymentMethod" class="mb-2"></p>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="text-muted">Required Skills</label>
+                  <div id="detailProjectSkills" class="d-flex flex-wrap gap-2"></div>
+                </div>
+                <div class="mb-3">
+                  <label class="text-muted">Additional Requirements</label>
+                  <p id="detailProjectRequirements" class="mb-2"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card mb-3">
+              <div class="card-body">
+                <h6 class="card-subtitle mb-3 text-muted">Project Status</h6>
+                <div class="mb-3">
+                  <span id="detailProjectStatus" class="badge mb-2"></span>
+                  <p id="detailProjectDeadline" class="mb-2"></p>
+                </div>
+                <div class="mb-3">
+                  <label class="text-muted">Client</label>
+                  <p id="detailProjectClient" class="mb-2"></p>
+                </div>
+                <div class="mb-3">
+                  <label class="text-muted">Created Date</label>
+                  <p id="detailProjectCreated" class="mb-2"></p>
+                </div>
+                <div class="mb-3">
+                  <label class="text-muted">Last Updated</label>
+                  <p id="detailProjectUpdated" class="mb-2"></p>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-subtitle mb-3 text-muted">Assigned Engineers</h6>
+                <div id="detailProjectEngineers" class="d-flex flex-wrap gap-2">
+                  <!-- Engineers will be populated here -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="editFromDetailsBtn">Edit Project</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="/js/bootstrap.bundle.min.js"></script>
 <script>
   let deleteProjectId = null;
   let statusProjectId = null;
   let statusAction = null;
+  let currentPage = 1;
+  let hasMorePages = false;
+  let selectedProject = null;
 
   // Helper functions
   function getStatusColor(status) {
@@ -210,250 +355,481 @@
     }
   }
 
-  // Load projects with filters
-  async function loadProjects() {
+  // Function to handle edit button click
+  function handleEditBtnClick(projectId) {
+    fetch(`/admin/api/projects/${projectId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const project = data.data;
+          document.getElementById('editProjectId').value = project._id;
+          document.getElementById('editProjectTitle').value = project.title;
+          document.getElementById('editProjectDescription').value = project.description || '';
+          document.getElementById('editProjectCategory').value = project.category || '';
+          document.getElementById('editProjectComplexity').value = project.complexity || '';
+          document.getElementById('editProjectSkills').value = project.requiredSkills ? project.requiredSkills.join(', ') : '';
+          document.getElementById('editProjectPayment').value = project.paymentAmount;
+          document.getElementById('editProjectPaymentMethod').value = project.paymentMethod || '';
+          document.getElementById('editProjectRequirements').value = project.additionalRequirements || '';
+          new bootstrap.Modal(document.getElementById('editProjectModal')).show();
+        } else {
+          toast.error('Failed to load project details');
+        }
+      })
+      .catch(error => {
+        console.error('Error loading project details:', error);
+        toast.error('Failed to load project details');
+      });
+  }
+
+  // Function to show project details
+  async function showProjectDetails(projectId) {
     try {
+      showLoader();
+      const response = await fetch(`/admin/api/projects/${projectId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        const project = data.data;
+        selectedProject = project;
+        
+        // Basic Info
+        document.getElementById('detailProjectTitle').textContent = project.title || 'No title';
+        document.getElementById('detailProjectDescription').textContent = project.description || 'No description provided';
+        document.getElementById('detailProjectCategory').textContent = project.category || 'Not specified';
+        document.getElementById('detailProjectComplexity').textContent = project.complexity || 'Not specified';
+        document.getElementById('detailProjectPayment').textContent = `$${project.paymentAmount || 0}`;
+        document.getElementById('detailProjectPaymentMethod').textContent = project.paymentMethod || 'Not specified';
+        document.getElementById('detailProjectRequirements').textContent = project.additionalRequirements || 'No additional requirements';
+        
+        // Status
+        const statusBadge = document.getElementById('detailProjectStatus');
+        statusBadge.textContent = project.status || 'Not specified';
+        statusBadge.className = `badge bg-${getStatusColor(project.status)}`;
+        
+        // Skills
+        const skillsContainer = document.getElementById('detailProjectSkills');
+        skillsContainer.innerHTML = '';
+        if (project.requiredSkills && project.requiredSkills.length > 0) {
+          project.requiredSkills.forEach(skill => {
+            if (skill) {  // Only add non-null skills
+              const badge = document.createElement('span');
+              badge.className = 'badge bg-info';
+              badge.textContent = skill;
+              skillsContainer.appendChild(badge);
+            }
+          });
+        } else {
+          skillsContainer.innerHTML = '<span class="text-muted">No skills specified</span>';
+        }
+
+        // Client Info
+        document.getElementById('detailProjectClient').textContent = project.client_id ? project.client_id.name : 'Not assigned';
+
+        // Engineers
+        const engineersContainer = document.getElementById('detailProjectEngineers');
+        engineersContainer.innerHTML = '';
+        if (project.assignedEngineers && project.assignedEngineers.length > 0) {
+          project.assignedEngineers.forEach(engineer => {
+            if (engineer) {  // Only add non-null engineers
+              const badge = document.createElement('span');
+              badge.className = 'badge bg-primary me-2 mb-2';
+              badge.textContent = engineer.name;
+              engineersContainer.appendChild(badge);
+            }
+          });
+        } else {
+          engineersContainer.innerHTML = '<span class="text-muted">No engineers assigned</span>';
+        }
+
+        // Dates
+        document.getElementById('detailProjectCreated').textContent = project.createdAt ? new Date(project.createdAt).toLocaleDateString() : 'N/A';
+        document.getElementById('detailProjectUpdated').textContent = project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : 'N/A';
+        document.getElementById('detailProjectDeadline').textContent = project.deadline ? `Due: ${new Date(project.deadline).toLocaleDateString()}` : 'No deadline set';
+
+        // Add click handler for edit button
+        document.getElementById('editFromDetailsBtn').onclick = () => {
+          bootstrap.Modal.getInstance(document.getElementById('projectDetailsModal')).hide();
+          handleEditBtnClick(projectId);
+        };
+
+        const modal = new bootstrap.Modal(document.getElementById('projectDetailsModal'));
+        modal.show();
+      } else {
+        toast.error('Failed to load project details');
+      }
+    } catch (error) {
+      console.error('Error loading project details:', error);
+      toast.error('Failed to load project details');
+    } finally {
+      hideLoader();
+    }
+  }
+
+  // Function to load projects
+  async function loadProjects(loadMore = false) {
+    const projectsList = document.getElementById('projectsList');
+    
+    try {
+      showLoader();
+      if (!loadMore) {
+        projectsList.innerHTML = '';
+        currentPage = 1;
+      }
+
       const status = document.getElementById('statusFilter').value;
       const category = document.getElementById('categoryFilter').value;
       const complexity = document.getElementById('complexityFilter').value;
-      const search = document.getElementById('searchInput').value;
+      const search = document.getElementById('searchInput').value.trim();
 
       const params = new URLSearchParams();
       if (status) params.append('status', status);
       if (category) params.append('category', category);
       if (complexity) params.append('complexity', complexity);
       if (search) params.append('search', search);
+      params.append('page', currentPage);
+      params.append('limit', 12);
 
       const response = await fetch('/admin/api/projects?' + params.toString());
       const data = await response.json();
-      if (data.success) {
-        const projectsList = document.getElementById('projectsList');
-        if (!data.data.length) {
-          projectsList.innerHTML = '<div class="col-12 text-center text-muted py-5">No projects found.</div>';
-          return;
+      
+      hideLoader();
+
+      if (!data.data || !data.data.length) {
+        if (!loadMore) {
+          projectsList.innerHTML = '<div class="text-center text-muted py-5">No projects found.</div>';
         }
-        projectsList.innerHTML = data.data.map(project => `
-          <div class="col-md-6 col-lg-4">
-            <div class="card project-card shadow-sm h-100 position-relative">
-              <div class="card-body">
-                <span class="badge bg-${getStatusColor(project.status)} status-badge text-capitalize">${project.status.replace('_', ' ')}</span>
-                <h5 class="card-title ellipsis" title="${project.title}">${project.title}</h5>
-                <p class="text-muted mb-2">Client: ${project.client?.name || 'Unknown'}</p>
-                <p class="card-text">${project.description}</p>
-                <div class="mb-3">
-                  ${(project.requiredSkills || []).map(skill => `
-                    <span class="badge bg-info skill-badge">${skill}</span>
-                  `).join('')}
-                </div>
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <span class="badge bg-${getComplexityColor(project.complexity)}">${project.complexity}</span>
-                    <small class="text-muted d-block">${project.category}</small>
-                  </div>
-                  <div class="text-end">
-                    <div class="fw-bold">$${(project.paymentAmount || 0).toLocaleString()}</div>
-                    <small class="text-muted">${project.paymentMethod}</small>
-                  </div>
-                </div>
+        document.getElementById('loadMoreBtn').style.display = 'none';
+        return;
+      }
+
+      const projectsHTML = data.data.map(project => `
+        <div class="col-md-6 col-lg-4">
+          <div class="card project-card shadow-sm h-100" style="cursor: pointer;" onclick="showProjectDetails('${project._id}')">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <h5 class="card-title mb-0">${project.title}</h5>
+                <span class="badge bg-${getStatusColor(project.status)}">${project.status}</span>
               </div>
-              <div class="card-footer bg-transparent d-flex justify-content-between align-items-center card-actions">
-                <small class="text-muted">Due: ${project.deadline ? new Date(project.deadline).toLocaleDateString() : 'N/A'}</small>
-                <div>
-                  <button class="btn btn-sm btn-info btn-assign-engineers" data-project-id="${project._id}" title="Assign Engineers"><i class="fas fa-users"></i></button>
-                  <button class="btn btn-sm btn-outline-primary btn-edit-project" data-project='${JSON.stringify({ _id: project._id, title: project.title, paymentAmount: project.paymentAmount })}' title="Edit"><i class="fas fa-edit"></i></button>
-                  <button class="btn btn-sm btn-outline-warning btn-status-project" data-id="${project._id}" data-status="in-progress" title="Set In Progress"><i class="fas fa-play"></i></button>
-                  <button class="btn btn-sm btn-outline-success btn-status-project" data-id="${project._id}" data-status="completed" title="Set Completed"><i class="fas fa-check"></i></button>
-                  <button class="btn btn-sm btn-outline-danger btn-delete-project" data-id="${project._id}" title="Delete"><i class="fas fa-trash"></i></button>
+              <p class="mb-1 text-muted"><i class="fas fa-user me-2"></i>${project.client_id ? project.client_id.name : 'No client'}</p>
+              <p class="mb-1 text-muted"><i class="fas fa-tag me-2"></i>${project.category || 'No category'}</p>
+              <p class="mb-1 text-muted"><i class="fas fa-dollar-sign me-2"></i>$${project.paymentAmount || 0}</p>
+              ${project.requiredSkills && project.requiredSkills.length > 0 ? `
+                <div class="mb-2">
+                  <small class="text-muted d-block mb-1"><i class="fas fa-tools me-2"></i>Skills:</small>
+                  ${project.requiredSkills.map(skill => `<span class="badge bg-info skill-badge">${skill}</span>`).join('')}
                 </div>
+              ` : ''}
+            </div>
+            <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+              <small class="text-muted">Created: ${new Date(project.createdAt).toLocaleDateString()}</small>
+              <div class="card-actions">
+                <button class="btn btn-sm btn-outline-primary btn-action" onclick="event.stopPropagation(); handleEditBtnClick('${project._id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-outline-success btn-action" onclick="event.stopPropagation(); handleAssignEngineersClick('${project._id}')" title="Assign Engineers"><i class="fas fa-users"></i></button>
+                <button class="btn btn-sm btn-outline-warning btn-action" onclick="event.stopPropagation(); handleStatusChangeClick('${project._id}')" title="Change Status"><i class="fas fa-exchange-alt"></i></button>
+                <button class="btn btn-sm btn-outline-danger btn-action" onclick="event.stopPropagation(); confirmDeleteProject('${project._id}')" title="Delete"><i class="fas fa-trash"></i></button>
               </div>
             </div>
           </div>
-        `).join('');
+        </div>
+      `).join('');
+
+      if (loadMore) {
+        projectsList.innerHTML += projectsHTML;
+      } else {
+        projectsList.innerHTML = `<div class="row g-4">${projectsHTML}</div>`;
       }
+
+      hasMorePages = data.pagination.hasNextPage;
+      document.getElementById('loadMoreBtn').style.display = hasMorePages ? 'inline-block' : 'none';
+
     } catch (error) {
       console.error('Error loading projects:', error);
+      toast.error('Failed to load projects');
+      hideLoader();
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function() {
-    // Add click handlers for status filter badges
-    document.querySelectorAll('.status-filter').forEach(badge => {
-      badge.addEventListener('click', function() {
-        const status = this.getAttribute('data-status');
-        document.getElementById('statusFilter').value = status;
-        loadProjects();
-      });
+  // Event Listeners
+  document.getElementById('statusFilter').addEventListener('change', () => loadProjects(false));
+  document.getElementById('categoryFilter').addEventListener('change', () => loadProjects(false));
+  document.getElementById('complexityFilter').addEventListener('change', () => loadProjects(false));
+  document.getElementById('searchInput').addEventListener('input', function() {
+    clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => loadProjects(false), 300);
+  });
+
+  document.getElementById('loadMoreBtn').addEventListener('click', function() {
+    if (hasMorePages) {
+      currentPage++;
+      loadProjects(true);
+    }
+  });
+
+  // Call loadProjects on page load
+  document.addEventListener('DOMContentLoaded', () => loadProjects(false));
+
+  // Add click handlers for status filter badges
+  document.querySelectorAll('.status-filter').forEach(badge => {
+    badge.addEventListener('click', function() {
+      const status = this.getAttribute('data-status');
+      document.getElementById('statusFilter').value = status;
+      loadProjects(false);
     });
+  });
 
-    loadProjects();
-    // Add event listeners for filters
-    document.getElementById('statusFilter').addEventListener('change', loadProjects);
-    document.getElementById('categoryFilter').addEventListener('change', loadProjects);
-    document.getElementById('complexityFilter').addEventListener('change', loadProjects);
-    document.getElementById('searchInput').addEventListener('input', function() {
-      clearTimeout(window.searchTimeout);
-      window.searchTimeout = setTimeout(loadProjects, 300);
+  // Save changes from edit modal
+  document.getElementById('saveProjectBtn').addEventListener('click', function() {
+    const id = document.getElementById('editProjectId').value;
+    const formData = {
+      title: document.getElementById('editProjectTitle').value,
+      description: document.getElementById('editProjectDescription').value,
+      category: document.getElementById('editProjectCategory').value,
+      complexity: document.getElementById('editProjectComplexity').value,
+      requiredSkills: document.getElementById('editProjectSkills').value.split(',').map(skill => skill.trim()).filter(skill => skill),
+      paymentAmount: document.getElementById('editProjectPayment').value,
+      paymentMethod: document.getElementById('editProjectPaymentMethod').value,
+      additionalRequirements: document.getElementById('editProjectRequirements').value
+    };
+
+    fetch(`/admin/api/projects/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('editProjectModal')).hide();
+        toast.success('Project updated successfully!');
+        setTimeout(() => loadProjects(), 1200);
+      } else {
+        toast.error(data.message || 'Failed to update project');
+      }
+    })
+    .catch(error => {
+      console.error('Error updating project:', error);
+      toast.error('Failed to update project. Please try again.');
     });
-    // Delegate all project actions
-    document.getElementById('projectsList').addEventListener('click', function(e) {
-      // Edit
-      if (e.target.closest('.btn-edit-project')) {
-        const btn = e.target.closest('.btn-edit-project');
-        const project = JSON.parse(btn.getAttribute('data-project'));
-        document.getElementById('editProjectId').value = project._id;
-        document.getElementById('editProjectTitle').value = project.title;
-        document.getElementById('editProjectPayment').value = project.paymentAmount;
-        new bootstrap.Modal(document.getElementById('editProjectModal')).show();
-      }
-      // Status change
-      if (e.target.closest('.btn-status-project')) {
-        const btn = e.target.closest('.btn-status-project');
-        statusProjectId = btn.getAttribute('data-id');
-        statusAction = btn.getAttribute('data-status');
-        document.getElementById('statusChangeMsg').textContent = `Are you sure you want to change the status to "${statusAction.replace('_', ' ')}"?`;
-        new bootstrap.Modal(document.getElementById('confirmStatusModal')).show();
-      }
-      // Delete
-      if (e.target.closest('.btn-delete-project')) {
-        deleteProjectId = e.target.closest('.btn-delete-project').getAttribute('data-id');
-        new bootstrap.Modal(document.getElementById('confirmDeleteModal')).show();
-      }
-      // Assign Engineers
-      if (e.target.closest('.btn-assign-engineers')) {
-        const btn = e.target.closest('.btn-assign-engineers');
-        const projectId = btn.getAttribute('data-project-id');
-        document.getElementById('assignProjectId').value = projectId;
+  });
 
-        // Fetch all engineers and populate the select
-        fetch('/admin/api/engineers')
-          .then(res => res.json())
-          .then(data => {
-            const select = document.getElementById('engineersSelect');
-            select.innerHTML = '';
-            (data.data || []).forEach(engineer => {
-              const option = document.createElement('option');
-              option.value = engineer._id;
-              option.textContent = `${engineer.name} (${engineer.email})`;
-              select.appendChild(option);
-            });
-
-            // Fetch assigned engineers for this project and pre-select them
-            fetch(`/admin/api/projects/${projectId}`)
-              .then(res => res.json())
-              .then(data => {
-                const assigned = (data.data.assignedEngineers || []).map(e => e._id);
-                Array.from(select.options).forEach(opt => {
-                  if (assigned.includes(opt.value)) opt.selected = true;
-                });
-                updateSelectedEngineersList();
-              });
-          });
-
-        new bootstrap.Modal(document.getElementById('assignEngineersModal')).show();
-      }
-    });
-
-    // Save changes from edit modal
-    document.getElementById('saveProjectBtn').addEventListener('click', function() {
-      const id = document.getElementById('editProjectId').value;
-      const title = document.getElementById('editProjectTitle').value;
-      const paymentAmount = document.getElementById('editProjectPayment').value;
-      fetch(`/admin/api/projects/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, paymentAmount })
-      })
+  // Function to handle status change click
+  function handleStatusChangeClick(projectId) {
+    statusProjectId = projectId;
+    
+    // First fetch the current project data to get the current status
+    fetch(`/admin/api/projects/${projectId}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          bootstrap.Modal.getInstance(document.getElementById('editProjectModal')).hide();
-          toast.success('Project updated successfully!');
-          setTimeout(() => loadProjects(), 1200);
+          const project = data.data;
+          const currentStatus = project.status || 'pending';
+          
+          // Add status options to the modal with current status selected
+          const modalBody = document.getElementById('statusChangeMsg');
+          modalBody.innerHTML = `
+            <div class="mb-3">
+              <label class="form-label">Select New Status</label>
+              <select class="form-select" id="newStatusSelect">
+                <option value="pending" ${currentStatus === 'pending' ? 'selected' : ''}>Pending</option>
+                <option value="in-progress" ${currentStatus === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                <option value="completed" ${currentStatus === 'completed' ? 'selected' : ''}>Completed</option>
+              </select>
+            </div>
+          `;
+          
+          const modal = new bootstrap.Modal(document.getElementById('confirmStatusModal'));
+          modal.show();
         } else {
-          toast.error(data.message || 'Failed to update project');
+          toast.error('Failed to load project status');
         }
+      })
+      .catch(error => {
+        console.error('Error loading project status:', error);
+        toast.error('Failed to load project status');
       });
-    });
+  }
 
-    // Confirm status change
-    document.getElementById('confirmStatusBtn').addEventListener('click', function() {
-      if (!statusProjectId || !statusAction) return;
-      fetch(`/admin/api/projects/${statusProjectId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: statusAction })
+  // Update confirm status button click handler
+  document.getElementById('confirmStatusBtn').addEventListener('click', function() {
+    if (!statusProjectId) return;
+    
+    const newStatus = document.getElementById('newStatusSelect').value;
+    
+    // First fetch the current project data
+    fetch(`/admin/api/projects/${statusProjectId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const project = data.data;
+          // Create update data with all existing fields plus the new status
+          const updateData = {
+            title: project.title,
+            description: project.description,
+            category: project.category,
+            complexity: project.complexity,
+            requiredSkills: project.requiredSkills,
+            paymentAmount: project.paymentAmount,
+            paymentMethod: project.paymentMethod,
+            additionalRequirements: project.additionalRequirements,
+            status: newStatus
+          };
+
+          // Send the update with all project data
+          return fetch(`/admin/api/projects/${statusProjectId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+          });
+        } else {
+          throw new Error('Failed to fetch project data');
+        }
       })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
           bootstrap.Modal.getInstance(document.getElementById('confirmStatusModal')).hide();
-          toast.success('Status updated!');
+          toast.success('Status updated successfully!');
           setTimeout(() => loadProjects(), 1200);
         } else {
           toast.error(data.message || 'Failed to update status');
         }
+      })
+      .catch(error => {
+        console.error('Error updating status:', error);
+        toast.error('Failed to update status. Please try again.');
       });
+  });
+
+  // Function to confirm project deletion
+  function confirmDeleteProject(projectId) {
+    deleteProjectId = projectId;
+    new bootstrap.Modal(document.getElementById('confirmDeleteModal')).show();
+  }
+
+  // Update confirm delete button click handler
+  document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    if (!deleteProjectId) return;
+    
+    fetch(`/admin/api/projects/${deleteProjectId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
+        toast.success('Project deleted successfully!');
+        setTimeout(() => loadProjects(), 1200);
+      } else {
+        toast.error(data.message || 'Failed to delete project');
+      }
+    })
+    .catch(error => {
+      console.error('Error deleting project:', error);
+      toast.error('Failed to delete project. Please try again.');
     });
+  });
 
-    // Confirm delete
-    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-      if (!deleteProjectId) return;
-      fetch(`/admin/as/${deleteProjectId}`, { method: 'DELETE' })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
-            toast.success('Project deleted successfully!');
-            setTimeout(() => loadProjects(), 1200);
-          } else {
-            toast.error(data.message || 'Failed to delete project');
-          }
-        });
-    });
+  // Function to handle assign engineers click
+  function handleAssignEngineersClick(projectId) {
+    document.getElementById('assignProjectId').value = projectId;
+    
+    // Fetch all engineers
+    fetch('/admin/api/engineers')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const select = document.getElementById('engineersSelect');
+          select.innerHTML = '';
+          
+          // Populate engineers select
+          data.data.forEach(engineer => {
+            const option = document.createElement('option');
+            option.value = engineer._id;
+            option.textContent = `${engineer.name} (${engineer.email})`;
+            select.appendChild(option);
+          });
 
-    // Add event listener for engineers select change
-    document.getElementById('engineersSelect').addEventListener('change', updateSelectedEngineersList);
-
-    // Function to update the selected engineers list
-    function updateSelectedEngineersList() {
-      const select = document.getElementById('engineersSelect');
-      const list = document.getElementById('selectedEngineersList');
-      list.innerHTML = '';
-      
-      Array.from(select.selectedOptions).forEach(option => {
-        const badge = document.createElement('span');
-        badge.className = 'badge bg-primary';
-        badge.textContent = option.textContent;
-        list.appendChild(badge);
-      });
-    }
-
-    // Save assigned engineers
-    document.getElementById('saveAssignEngineersBtn').addEventListener('click', function() {
-      const projectId = document.getElementById('assignProjectId').value;
-      const select = document.getElementById('engineersSelect');
-      const selectedEngineers = Array.from(select.selectedOptions).map(opt => opt.value);
-
-      fetch(`/admin/api/projects/${projectId}/assign-engineers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ engineers: selectedEngineers })
+          // Fetch current project to get assigned engineers
+          return fetch(`/admin/api/projects/${projectId}`);
+        } else {
+          throw new Error('Failed to load engineers');
+        }
       })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          bootstrap.Modal.getInstance(document.getElementById('assignEngineersModal')).hide();
-          toast.success('Engineers assigned successfully!');
-          setTimeout(() => loadProjects(), 1200);
+          // Pre-select currently assigned engineers
+          const assignedEngineers = data.data.assignedEngineers || [];
+          const select = document.getElementById('engineersSelect');
+          
+          Array.from(select.options).forEach(option => {
+            if (assignedEngineers.some(engineer => engineer._id === option.value)) {
+              option.selected = true;
+            }
+          });
+          
+          updateSelectedEngineersList();
+          new bootstrap.Modal(document.getElementById('assignEngineersModal')).show();
         } else {
-          toast.error(data.message || 'Failed to assign engineers');
+          throw new Error('Failed to load project details');
         }
       })
       .catch(error => {
-        console.error('Error assigning engineers:', error);
-        toast.error('Failed to assign engineers. Please try again.');
+        console.error('Error:', error);
+        toast.error('Failed to load engineers. Please try again.');
       });
+  }
+
+  // Function to update selected engineers list
+  function updateSelectedEngineersList() {
+    const select = document.getElementById('engineersSelect');
+    const list = document.getElementById('selectedEngineersList');
+    list.innerHTML = '';
+    
+    Array.from(select.selectedOptions).forEach(option => {
+      const badge = document.createElement('span');
+      badge.className = 'badge bg-primary me-2 mb-2';
+      badge.textContent = option.textContent;
+      list.appendChild(badge);
+    });
+  }
+
+  // Add event listener for engineers select change
+  document.getElementById('engineersSelect').addEventListener('change', updateSelectedEngineersList);
+
+  // Save assigned engineers
+  document.getElementById('saveAssignEngineersBtn').addEventListener('click', function() {
+    const projectId = document.getElementById('assignProjectId').value;
+    const select = document.getElementById('engineersSelect');
+    const selectedEngineers = Array.from(select.selectedOptions).map(opt => opt.value);
+
+    if (selectedEngineers.length === 0) {
+      toast.error('Please select at least one engineer');
+      return;
+    }
+
+    fetch(`/admin/api/projects/${projectId}/assign-engineers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ engineers: selectedEngineers })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('assignEngineersModal')).hide();
+        toast.success('Engineers assigned successfully!');
+        setTimeout(() => loadProjects(), 1200);
+      } else {
+        toast.error(data.message || 'Failed to assign engineers');
+      }
+    })
+    .catch(error => {
+      console.error('Error assigning engineers:', error);
+      toast.error('Failed to assign engineers. Please try again.');
     });
   });
 </script>
+<%- include('partials/loader') %>
 <%- include('partials/toaster') %>

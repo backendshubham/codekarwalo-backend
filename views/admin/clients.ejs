@@ -28,6 +28,14 @@
   <div id="clientsList">
     <!-- Clients will be rendered here dynamically -->
   </div>
+  <div id="loaderContainer" class="loader-container">
+    <div class="loader"></div>
+  </div>
+  <div class="text-center mt-4" id="loadMoreContainer">
+    <button class="btn btn-outline-primary" id="loadMoreBtn" style="display: none;">
+      Load More
+    </button>
+  </div>
 </div>
 
 <!-- Add Client Modal -->
@@ -144,6 +152,75 @@
   </div>
 </div>
 
+<!-- Client Details Modal -->
+<div class="modal fade" id="clientDetailsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Client Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-4 text-center mb-4">
+            <div class="client-avatar mb-3">
+              <i class="fas fa-user-circle fa-5x text-primary"></i>
+            </div>
+            <h4 id="detailClientName" class="mb-2"></h4>
+            <span id="detailClientStatus" class="badge mb-3"></span>
+          </div>
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-subtitle mb-3 text-muted">Contact Information</h6>
+                <div class="mb-3">
+                  <label class="text-muted">Email</label>
+                  <p id="detailClientEmail" class="mb-2"></p>
+                </div>
+                <div class="mb-3">
+                  <label class="text-muted">Phone</label>
+                  <p id="detailClientPhone" class="mb-2"></p>
+                </div>
+                <div class="mb-3">
+                  <label class="text-muted">Joined Date</label>
+                  <p id="detailClientJoined" class="mb-2"></p>
+                </div>
+                <div class="mb-3">
+                  <label class="text-muted">Last Updated</label>
+                  <p id="detailClientUpdated" class="mb-2"></p>
+                </div>
+              </div>
+            </div>
+            <div class="card mt-3">
+              <div class="card-body">
+                <h6 class="card-subtitle mb-3 text-muted">Projects Overview</h6>
+                <div class="row text-center">
+                  <div class="col-4">
+                    <h3 id="detailTotalProjects" class="mb-1">0</h3>
+                    <small class="text-muted">Total Projects</small>
+                  </div>
+                  <div class="col-4">
+                    <h3 id="detailActiveProjects" class="mb-1">0</h3>
+                    <small class="text-muted">Active Projects</small>
+                  </div>
+                  <div class="col-4">
+                    <h3 id="detailCompletedProjects" class="mb-1">0</h3>
+                    <small class="text-muted">Completed</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="editFromDetailsBtn">Edit Client</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <style>
   .client-card {
     transition: transform 0.2s;
@@ -169,21 +246,104 @@
     font-size: 0.8rem;
     margin: 0.2rem;
   }
+  .loader-container {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+  }
+  .loader {
+    width: 48px;
+    height: 48px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #2563eb;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 </style>
 
 <script>
   let deleteClientId = null;
   let statusClientId = null;
   let statusAction = null;
+  let currentPage = 1;
+  let hasMorePages = false;
+  let selectedClient = null;
 
-  async function loadClients() {
+  // Function to show client details modal
+  async function showClientDetails(clientId) {
     try {
+      showLoader();
+      const response = await fetch(`/admin/api/clients/${clientId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        const client = data.data;
+        selectedClient = client;
+        
+        document.getElementById('detailClientName').textContent = client.name;
+        document.getElementById('detailClientStatus').textContent = client.status;
+        document.getElementById('detailClientStatus').className = `badge bg-${client.status === 'active' ? 'success' : 'secondary'}`;
+        document.getElementById('detailClientEmail').textContent = client.email;
+        document.getElementById('detailClientPhone').textContent = client.phone || 'Not provided';
+        document.getElementById('detailClientJoined').textContent = client.createdAt ? new Date(client.createdAt).toLocaleDateString() : 'N/A';
+        document.getElementById('detailClientUpdated').textContent = client.updatedAt ? new Date(client.updatedAt).toLocaleDateString() : 'N/A';
+
+        // Fetch project statistics
+        const statsResponse = await fetch(`/admin/api/clients/${clientId}/projects`);
+        const statsData = await statsResponse.json();
+        
+        if (statsData.success) {
+          document.getElementById('detailTotalProjects').textContent = statsData.total || 0;
+          document.getElementById('detailActiveProjects').textContent = statsData.active || 0;
+          document.getElementById('detailCompletedProjects').textContent = statsData.completed || 0;
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('clientDetailsModal'));
+        modal.show();
+      } else {
+        toast.error('Failed to load client details');
+      }
+    } catch (error) {
+      console.error('Error loading client details:', error);
+      toast.error('Failed to load client details');
+    } finally {
+      hideLoader();
+    }
+  }
+
+  // Add click handler for edit from details button
+  document.getElementById('editFromDetailsBtn').addEventListener('click', function() {
+    if (selectedClient) {
+      const modal = bootstrap.Modal.getInstance(document.getElementById('clientDetailsModal'));
+      modal.hide();
+      openEditModal(selectedClient);
+    }
+  });
+
+  async function loadClients(loadMore = false) {
+    const clientsList = document.getElementById('clientsList');
+    
+    try {
+      // Show loader
+      showLoader();
+      if (!loadMore) {
+        clientsList.innerHTML = '';
+        currentPage = 1;
+      }
+
       const status = document.getElementById('statusFilter').value;
       const search = document.getElementById('searchInput').value;
 
       const params = new URLSearchParams();
       if (status) params.append('status', status);
       if (search) params.append('search', search);
+      params.append('page', currentPage);
+      params.append('limit', 12);
 
       const response = await fetch('/admin/api/clients?' + params.toString());
       if (!response.ok) {
@@ -191,44 +351,57 @@
       }
       const data = await response.json();
             
-      const clientsList = document.getElementById('clientsList');
+      // Hide loader
+      hideLoader();
+
       if (!data.data || !data.data.length) {
-        clientsList.innerHTML = '<div class="text-center text-muted py-5">No clients found.</div>';
+        if (!loadMore) {
+          clientsList.innerHTML = '<div class="text-center text-muted py-5">No clients found.</div>';
+        }
+        document.getElementById('loadMoreBtn').style.display = 'none';
         return;
       }
 
-      clientsList.innerHTML = `
-        <div class="row g-4">
-          ${data.data.map(client => `
-            <div class="col-md-6 col-lg-4">
-              <div class="card client-card shadow-sm h-100">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h5 class="card-title mb-0">${client.name}</h5>
-                    <span class="badge bg-${client.status === 'active' ? 'success' : 'secondary'}">${client.status}</span>
-                  </div>
-                  <p class="mb-1"><i class="fas fa-envelope me-2"></i>${client.email}</p>
-                  ${client.phone ? `<p class="mb-1"><i class="fas fa-phone me-2"></i>${client.phone}</p>` : ''}
-                </div>
-                <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
-                  <small class="text-muted">Joined: ${client.createdAt ? new Date(client.createdAt).toLocaleDateString() : ''}</small>
-                  <div class="card-actions">
-                    ${client.status === 'active' ? 
-                      `<button class="btn btn-sm btn-outline-warning btn-action" onclick="confirmStatusChange('${client._id}', 'deactivate')" title="Set inactive"><i class="fas fa-user-slash"></i></button>` : 
-                      `<button class="btn btn-sm btn-outline-success btn-action" onclick="confirmStatusChange('${client._id}', 'activate')" title="Set active"><i class="fas fa-user-check"></i></button>`
-                    }
-                    <button class="btn btn-sm btn-outline-primary btn-action" data-client='${JSON.stringify({ _id: client._id, name: client.name, email: client.email, phone: client.phone })}' onclick="handleEditBtnClick(this)" title="Edit"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-outline-danger btn-action" onclick="confirmDeleteClient('${client._id}')" title="Delete"><i class="fas fa-trash"></i></button>
-                  </div>
-                </div>
+      const clientsHTML = data.data.map(client => `
+        <div class="col-md-6 col-lg-4">
+          <div class="card client-card shadow-sm h-100" style="cursor: pointer;" onclick="showClientDetails('${client._id}')">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <h5 class="card-title mb-0">${client.name}</h5>
+                <span class="badge bg-${client.status === 'active' ? 'success' : 'secondary'}">${client.status}</span>
+              </div>
+              <p class="mb-1"><i class="fas fa-envelope me-2"></i>${client.email}</p>
+              ${client.phone ? `<p class="mb-1"><i class="fas fa-phone me-2"></i>${client.phone}</p>` : ''}
+            </div>
+            <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+              <small class="text-muted">Joined: ${client.createdAt ? new Date(client.createdAt).toLocaleDateString() : ''}</small>
+              <div class="card-actions">
+                ${client.status === 'active' ? 
+                  `<button class="btn btn-sm btn-outline-warning btn-action" onclick="event.stopPropagation(); confirmStatusChange('${client._id}', 'deactivate')" title="Set inactive"><i class="fas fa-user-slash"></i></button>` : 
+                  `<button class="btn btn-sm btn-outline-success btn-action" onclick="event.stopPropagation(); confirmStatusChange('${client._id}', 'activate')" title="Set active"><i class="fas fa-user-check"></i></button>`
+                }
+                <button class="btn btn-sm btn-outline-primary btn-action" data-client='${JSON.stringify({ _id: client._id, name: client.name, email: client.email, phone: client.phone })}' onclick="event.stopPropagation(); handleEditBtnClick(this)" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-outline-danger btn-action" onclick="event.stopPropagation(); confirmDeleteClient('${client._id}')" title="Delete"><i class="fas fa-trash"></i></button>
               </div>
             </div>
-          `).join('')}
+          </div>
         </div>
-      `;
+      `).join('');
+
+      if (loadMore) {
+        clientsList.innerHTML += clientsHTML;
+      } else {
+        clientsList.innerHTML = `<div class="row g-4">${clientsHTML}</div>`;
+      }
+
+      // Update load more button visibility
+      hasMorePages = data.pagination.hasNextPage;
+      document.getElementById('loadMoreBtn').style.display = hasMorePages ? 'inline-block' : 'none';
+
     } catch (error) {
       console.error('Error loading clients:', error);
       toast.error('Failed to load clients');
+      hideLoader();
     }
   }
 
@@ -385,15 +558,24 @@
     }
   });
 
-  // Add event listeners for filters
-  document.getElementById('statusFilter').addEventListener('change', loadClients);
+  // Add load more button click handler
+  document.getElementById('loadMoreBtn').addEventListener('click', function() {
+    if (hasMorePages) {
+      currentPage++;
+      loadClients(true);
+    }
+  });
+
+  // Update existing event listeners to reset pagination
+  document.getElementById('statusFilter').addEventListener('change', () => loadClients(false));
   document.getElementById('searchInput').addEventListener('input', function() {
     clearTimeout(window.searchTimeout);
-    window.searchTimeout = setTimeout(loadClients, 300);
+    window.searchTimeout = setTimeout(() => loadClients(false), 300);
   });
 
   // Call loadClients() on page load
-  document.addEventListener('DOMContentLoaded', loadClients);
-  </script>
+  document.addEventListener('DOMContentLoaded', () => loadClients(false));
+</script>
 
+<%- include('partials/loader') %>
 <%- include('partials/toaster') %>

@@ -116,28 +116,50 @@
   <div class="row mb-4">
     <div class="col-md-8">
       <div class="card shadow-sm">
-        <div class="card-header bg-white">
-          <h5 class="mb-0">Today's Activity</h5>
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Recent Activities</h5>
+          <button class="btn btn-sm btn-outline-primary" onclick="refreshActivities()">
+            <i class="fas fa-sync-alt"></i> Refresh
+          </button>
         </div>
         <div class="card-body">
-          <% if (todaysActivities && todaysActivities.length > 0) { %>
-            <div class="timeline" style="max-height:500px; overflow-y:auto;">
-              <% todaysActivities.forEach(activity => { %>
-                <div class="timeline-item">
-                  <span class="timeline-icon bg-<%= activity.type %>-subtle">
-                    <i class="fas fa-<%= activity.icon %> text-<%= activity.type %>"></i>
-                  </span>
-                  <div class="timeline-content ms-4">
-                    <div class="fw-bold"><%= activity.title %></div>
-                    <div class="text-muted small"><%= activity.description %></div>
-                    <div class="text-muted small"><i class="far fa-clock me-1"></i><%= activity.time %></div>
-                  </div>
+          <div id="activitiesTimeline" class="timeline" style="max-height:500px; overflow-y:auto;">
+            <% if (todaysActivities && todaysActivities.length > 0) { %>
+              <% 
+                // Group activities by date
+                const groupedActivities = todaysActivities.reduce((acc, activity) => {
+                  const date = activity.date;
+                  if (!acc[date]) {
+                    acc[date] = [];
+                  }
+                  acc[date].push(activity);
+                  return acc;
+                }, {});
+              %>
+              <% Object.entries(groupedActivities).forEach(([date, activities]) => { %>
+                <div class="mb-3">
+                  <h6 class="text-muted mb-2"><%= date %></h6>
+                  <% activities.forEach(activity => { %>
+                    <div class="timeline-item">
+                      <span class="timeline-icon bg-<%= activity.type %>-subtle">
+                        <i class="fas fa-<%= activity.icon %> text-<%= activity.type %>"></i>
+                      </span>
+                      <div class="timeline-content ms-4">
+                        <div class="fw-bold"><%= activity.title %></div>
+                        <div class="text-muted small"><%= activity.description %></div>
+                        <div class="text-muted small">
+                          <i class="far fa-clock me-1"></i><%= activity.time %>
+                          <i class="fas fa-user ms-2 me-1"></i><%= activity.user %>
+                        </div>
+                      </div>
+                    </div>
+                  <% }); %>
                 </div>
               <% }); %>
-            </div>
-          <% } else { %>
-            <div class="text-center text-muted py-4">No activity for today.</div>
-          <% } %>
+            <% } else { %>
+              <div class="text-center text-muted py-4">No activities found.</div>
+            <% } %>
+          </div>
         </div>
       </div>
     </div>
@@ -147,45 +169,282 @@
           <h5 class="mb-0">Today's Registrations</h5>
         </div>
         <div class="card-body d-flex flex-column align-items-center justify-content-center">
-          <canvas id="todayPieChart" width="250" height="250"></canvas>
+          <% if (todayCounts.clients === 0 && todayCounts.projects === 0 && todayCounts.engineers === 0) { %>
+            <div class="text-center text-muted py-4">
+              <i class="fas fa-calendar-day fa-3x mb-3"></i>
+              <p class="mb-0">No registrations today</p>
+              <small class="text-muted">Check back later for new registrations</small>
+            </div>
+          <% } else { %>
+            <div style="width: 250px; height: 250px;">
+              <canvas id="todayPieChart" width="250" height="250" style="width: 100%; height: 100%;"></canvas>
+            </div>
+            <div class="mt-3 text-center">
+              <div class="d-flex justify-content-around">
+                <div>
+                  <span class="badge bg-primary m-2">Clients: <%= todayCounts.clients || 0 %></span>
+                </div>
+                <div>
+                  <span class="badge bg-danger m-2">Projects: <%= todayCounts.projects || 0 %></span>
+                </div>
+                <div>
+                  <span class="badge bg-success m-2">Engineers: <%= todayCounts.engineers || 0 %></span>
+                </div>
+              </div>
+            </div>
+          <% } %>
         </div>
       </div>
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // Load activities
+      loadActivities();
+
+      // Load top performers
+      loadTopEngineers();
+      loadTopClients();
+
       // Today's Registrations Pie Chart
-      const todayCounts = JSON.parse('<%- JSON.stringify(todayCounts || {}) %>');
-      const regLabels = ['Clients', 'Projects', 'Engineers'];
-      const regData = [todayCounts.clients || 0, todayCounts.projects || 0, todayCounts.engineers || 0];
-      const regColors = ['#2563eb', '#f43f5e', '#10b981'];
-      if (document.getElementById('todayPieChart')) {
-        new Chart(document.getElementById('todayPieChart').getContext('2d'), {
-          type: 'pie',
+      const todayCounts = {
+        clients: parseInt('<%= todayCounts.clients || 0 %>'),
+        projects: parseInt('<%= todayCounts.projects || 0 %>'),
+        engineers: parseInt('<%= todayCounts.engineers || 0 %>')
+      };
+
+      const totalRegistrations = todayCounts.clients + todayCounts.projects + todayCounts.engineers;
+      
+      if (totalRegistrations > 0 && document.getElementById('todayPieChart')) {
+        const ctx = document.getElementById('todayPieChart').getContext('2d');
+        console.log('Chart initialized');
+        new Chart(ctx, {
+          type: 'bar',
           data: {
-            labels: regLabels,
+            labels: ['Clients', 'Projects', 'Engineers'],
             datasets: [{
-              data: regData,
-              backgroundColor: regColors,
+              data: [todayCounts.clients, todayCounts.projects, todayCounts.engineers],
+              backgroundColor: ['#2563eb', '#f43f5e', '#10b981'],
               borderWidth: 1
             }]
           },
           options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
               legend: {
-                display: true,
-                position: 'bottom'
-              },
-              title: {
                 display: false
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const label = context.label || '';
+                    const value = context.raw || 0;
+                    return `${label}: ${value}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  precision: 0
+                },
+                title: {
+                  display: true,
+                  text: 'Count'
+                }
+              },
+              x: {
+                title: {
+                  display: false
+                }
               }
             }
           }
         });
       }
+
+      // Fetch earnings this month
+      fetch('/admin/api/dashboard/earnings-this-month')
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('earningsThisMonth').textContent = '$' + (data.total || 0).toLocaleString();
+        });
     });
+
+    // Function to load activities
+    function loadActivities() {
+      fetch('/admin/api/activities')
+        .then(res => res.json())
+        .then(data => {
+          const timeline = document.getElementById('activitiesTimeline');
+          if (data.success && data.data.length > 0) {
+            // Group activities by date
+            const groupedActivities = data.data.reduce((acc, activity) => {
+              const date = activity.date;
+              if (!acc[date]) {
+                acc[date] = [];
+              }
+              acc[date].push(activity);
+              return acc;
+            }, {});
+
+            // Create timeline HTML
+            let timelineHTML = '';
+            Object.entries(groupedActivities).forEach(([date, activities]) => {
+              timelineHTML += `
+                <div class="mb-3">
+                  <h6 class="text-muted mb-2">${date}</h6>
+                  ${activities.map(activity => `
+                    <div class="timeline-item">
+                      <span class="timeline-icon bg-${activity.type}-subtle">
+                        <i class="fas fa-${activity.icon} text-${activity.type}"></i>
+                      </span>
+                      <div class="timeline-content ms-4">
+                        <div class="fw-bold">${activity.title}</div>
+                        <div class="text-muted small">${activity.description}</div>
+                        <div class="text-muted small">
+                          <i class="far fa-clock me-1"></i>${activity.time}
+                          <i class="fas fa-user ms-2 me-1"></i>${activity.user}
+                        </div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              `;
+            });
+            timeline.innerHTML = timelineHTML;
+          } else {
+            timeline.innerHTML = '<div class="text-center text-muted py-4">No activities found.</div>';
+          }
+        })
+        .catch(error => {
+          console.error('Error loading activities:', error);
+          document.getElementById('activitiesTimeline').innerHTML = 
+            '<div class="text-center text-danger py-4">Error loading activities. Please try again.</div>';
+        });
+    }
+
+    // Function to refresh activities
+    function refreshActivities() {
+      const timeline = document.getElementById('activitiesTimeline');
+      timeline.innerHTML = `
+        <div class="text-center text-muted py-4">
+          <div class="spinner-border spinner-border-sm me-2" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          Refreshing activities...
+        </div>
+      `;
+      loadActivities();
+    }
+
+    // Function to load top engineers
+    function loadTopEngineers() {
+      fetch('/admin/api/dashboard/top-engineers')
+        .then(res => res.json())
+        .then(data => {
+          const list = document.getElementById('topEngineersList');
+          if (data.success && data.data.length > 0) {
+            list.innerHTML = data.data.map(e => `
+              <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-bold">${e.name}</div>
+                  <small class="text-muted">${e.email}</small>
+                </div>
+                <span class="badge bg-primary rounded-pill">${e.completedProjects} projects</span>
+              </div>
+            `).join('');
+          } else {
+            list.innerHTML = `
+              <div class="text-center text-muted py-4">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <p class="mb-0">No engineers found</p>
+                <small>No engineers have completed projects yet</small>
+              </div>
+            `;
+          }
+        })
+        .catch(error => {
+          console.error('Error loading top engineers:', error);
+          document.getElementById('topEngineersList').innerHTML = `
+            <div class="text-center text-danger py-4">
+              <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
+              <p class="mb-0">Error loading engineers</p>
+              <small>Please try again later</small>
+            </div>
+          `;
+        });
+    }
+
+    // Function to load top clients
+    function loadTopClients() {
+      fetch('/admin/api/dashboard/top-clients')
+        .then(res => res.json())
+        .then(data => {
+          const list = document.getElementById('topClientsList');
+          if (data.success && data.data.length > 0) {
+            list.innerHTML = data.data.map(c => `
+              <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-bold">${c.name}</div>
+                  <small class="text-muted">${c.email}</small>
+                </div>
+                <span class="badge bg-success rounded-pill">${c.projects} projects</span>
+              </div>
+            `).join('');
+          } else {
+            list.innerHTML = `
+              <div class="text-center text-muted py-4">
+                <i class="fas fa-building fa-2x mb-2"></i>
+                <p class="mb-0">No clients found</p>
+                <small>No clients have created projects yet</small>
+              </div>
+            `;
+          }
+        })
+        .catch(error => {
+          console.error('Error loading top clients:', error);
+          document.getElementById('topClientsList').innerHTML = `
+            <div class="text-center text-danger py-4">
+              <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
+              <p class="mb-0">Error loading clients</p>
+              <small>Please try again later</small>
+            </div>
+          `;
+        });
+    }
+
+    // Function to refresh top engineers
+    function refreshTopEngineers() {
+      const list = document.getElementById('topEngineersList');
+      list.innerHTML = `
+        <div class="text-center text-muted py-4">
+          <div class="spinner-border spinner-border-sm me-2" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          Refreshing top engineers...
+        </div>
+      `;
+      loadTopEngineers();
+    }
+
+    // Function to refresh top clients
+    function refreshTopClients() {
+      const list = document.getElementById('topClientsList');
+      list.innerHTML = `
+        <div class="text-center text-muted py-4">
+          <div class="spinner-border spinner-border-sm me-2" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          Refreshing top clients...
+        </div>
+      `;
+      loadTopClients();
+    }
   </script>
 
   <div class="row g-4">
@@ -315,6 +574,71 @@
               <p class="text-muted mb-0">No pending projects found</p>
             </div>
           <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <h6 class="mb-0">Top Engineers</h6>
+          <button class="btn btn-sm btn-outline-primary" onclick="refreshTopEngineers()">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+        </div>
+        <div class="card-body">
+          <div id="topEngineersList" class="list-group">
+            <% if (topEngineers && topEngineers.length > 0) { %>
+              <% topEngineers.forEach(engineer => { %>
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="fw-bold"><%= engineer.name %></div>
+                    <small class="text-muted"><%= engineer.email %></small>
+                  </div>
+                  <span class="badge bg-primary rounded-pill"><%= engineer.completedProjects %> projects</span>
+                </div>
+              <% }); %>
+            <% } else { %>
+              <div class="text-center text-muted py-4">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <p class="mb-0">No engineers found</p>
+                <small>No engineers have completed projects yet</small>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <h6 class="mb-0">Top Clients</h6>
+          <button class="btn btn-sm btn-outline-primary" onclick="refreshTopClients()">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+        </div>
+        <div class="card-body">
+          <div id="topClientsList" class="list-group">
+            <% if (topClients && topClients.length > 0) { %>
+              <% topClients.forEach(client => { %>
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="fw-bold"><%= client.name %></div>
+                    <small class="text-muted"><%= client.email %></small>
+                  </div>
+                  <span class="badge bg-success rounded-pill"><%= client.projects %> projects</span>
+                </div>
+              <% }); %>
+            <% } else { %>
+              <div class="text-center text-muted py-4">
+                <i class="fas fa-building fa-2x mb-2"></i>
+                <p class="mb-0">No clients found</p>
+                <small>No clients have created projects yet</small>
+              </div>
+            <% } %>
+          </div>
         </div>
       </div>
     </div>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Engineer Registration</title>
+</head>
+<body>
+    <form action="http://localhost:3000/api/engineer/register" method="POST" enctype="multipart/form-data">
+        <input type="text" name="name" value="Alice Johnson" required><br>
+        <input type="email" name="email" value="alice.johnson@example.com" required><br>
+        <input type="password" name="password" value="Test@123" required><br>
+        <textarea name="bio" required>Experienced software engineer with expertise in full-stack development</textarea><br>
+        <input type="text" name="skills" value="JavaScript,Node.js,React,MongoDB" required><br>
+        <input type="text" name="designation" value="Senior Software Engineer" required><br>
+        <input type="text" name="specialization" value="Full Stack Development"><br>
+        <input type="text" name="experience" value="5"><br>
+        <input type="text" name="status" value="active"><br>
+        <input type="text" name="contact[phone]" value="+1234567890"><br>
+        <input type="text" name="contact[address]" value="123 Tech Street"><br>
+        <input type="text" name="contact[city]" value="Tech City"><br>
+        <input type="text" name="contact[state]" value="Tech State"><br>
+        <input type="text" name="contact[country]" value="Tech Country"><br>
+        <input type="text" name="contact[zipCode]" value="12345"><br>
+        <input type="text" name="socialLinks[github]" value="https://github.com/alicejohnson"><br>
+        <input type="text" name="socialLinks[linkedin]" value="https://linkedin.com/in/alicejohnson"><br>
+        <input type="text" name="resume" value="https://codekarwalo.s3.amazonaws.com/resumes/Alice_Johnson_resume_1747294169610.pdf" required><br>
+        <input type="checkbox" name="termsAccepted" value="true" checked required><br>
+        <button type="submit">Register</button>
+    </form>
+</body>
+</html> 

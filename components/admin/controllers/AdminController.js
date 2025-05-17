@@ -35,12 +35,14 @@ const getDashboard = async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [stats, activityData, clientsToday, projectsToday, engineersToday] = await Promise.all([
+    const [stats, activityData, clientsToday, projectsToday, engineersToday, topEngineers, topClients] = await Promise.all([
       getDashboardStats(),
       getRecentActivities(),
       Client.countDocuments({ createdAt: { $gte: today } }),
       Project.countDocuments({ createdAt: { $gte: today } }),
-      Engineer.countDocuments({ createdAt: { $gte: today } })
+      Engineer.countDocuments({ createdAt: { $gte: today } }),
+      getTopEngineersData(),
+      getTopClientsData()
     ]);
     const todaysActivities = activityData.activities;
     const todaysActivityTypeCounts = activityData.typeCounts;
@@ -53,13 +55,16 @@ const getDashboard = async (req, res) => {
     };
     res.render('admin/dashboard', {
       title: 'Dashboard',
+      activePage: 'dashboard',
       user: req.session.adminId,
       stats,
       todaysActivities,
       todaysActivityTypeCounts,
       todayCounts,
       pendingProjects,
-      activeProjects
+      activeProjects,
+      topEngineers,
+      topClients
     });
   } catch (error) {
     console.error(error);
@@ -248,12 +253,17 @@ const getDashboardStats = async (req, res = null) => {
 };
 
 const getRecentActivities = async () => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 7);
+  startDate.setHours(0, 0, 0, 0);
 
-  const recentActivities = await Activity.find({ createdAt: { $gte: today } })
+  const recentActivities = await Activity.find({ createdAt: { $gte: startDate } })
     .sort({ createdAt: -1 })
-    .limit(50)
+    .populate({
+      path: 'user',
+      model: 'admins',
+      select: 'name'
+    })
     .lean();
 
   // Count activity types
@@ -267,10 +277,11 @@ const getRecentActivities = async () => {
     activities: recentActivities.map(a => ({
       title: a.title,
       description: a.description,
-      time: a.createdAt.toLocaleTimeString(),
+      time: new Date(a.createdAt).toLocaleTimeString(),
       type: a.type || 'info',
       icon: a.icon || 'info-circle',
-      date: 'today'
+      date: new Date(a.createdAt).toLocaleDateString(),
+      user: a.user ? a.user.name : 'Unknown'
     })),
     typeCounts
   };
@@ -615,6 +626,168 @@ const getProjectsPage = (req, res) => {
   res.render('admin/projects');
 };
 
+const getTopEngineers = async (req, res) => {
+  try {
+    const engineers = await Engineer.aggregate([
+      {
+        $lookup: {
+          from: 'projects',
+          localField: '_id',
+          foreignField: 'assignedEngineers',
+          as: 'projects'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          email: 1,
+          completedProjects: {
+            $size: {
+              $filter: {
+                input: '$projects',
+                as: 'project',
+                cond: { $eq: ['$$project.status', 'completed'] }
+              }
+            }
+          }
+        }
+      },
+      {
+        $sort: { completedProjects: -1 }
+      },
+      {
+        $limit: 5
+      }
+    ]);
+
+    res.json({
+      success: true,
+      data: engineers
+    });
+  } catch (error) {
+    console.error('Error in getTopEngineers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching top engineers'
+    });
+  }
+};
+
+const getTopClients = async (req, res) => {
+  try {
+    const clients = await Client.aggregate([
+      {
+        $lookup: {
+          from: 'projects',
+          localField: '_id',
+          foreignField: 'client_id',
+          as: 'projects'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          email: 1,
+          projects: { $size: '$projects' }
+        }
+      },
+      {
+        $sort: { projects: -1 }
+      },
+      {
+        $limit: 5
+      }
+    ]);
+
+    res.json({
+      success: true,
+      data: clients
+    });
+  } catch (error) {
+    console.error('Error in getTopClients:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching top clients'
+    });
+  }
+};
+
+// Helper function to get top engineers data
+const getTopEngineersData = async () => {
+  try {
+    const engineers = await Engineer.aggregate([
+      {
+        $lookup: {
+          from: 'projects',
+          localField: '_id',
+          foreignField: 'assignedEngineers',
+          as: 'projects'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          email: 1,
+          completedProjects: {
+            $size: {
+              $filter: {
+                input: '$projects',
+                as: 'project',
+                cond: { $eq: ['$$project.status', 'completed'] }
+              }
+            }
+          }
+        }
+      },
+      {
+        $sort: { completedProjects: -1 }
+      },
+      {
+        $limit: 5
+      }
+    ]);
+
+    return engineers;
+  } catch (error) {
+    console.error('Error in getTopEngineersData:', error);
+    return [];
+  }
+};
+
+// Helper function to get top clients data
+const getTopClientsData = async () => {
+  try {
+    const clients = await Client.aggregate([
+      {
+        $lookup: {
+          from: 'projects',
+          localField: '_id',
+          foreignField: 'client_id',
+          as: 'projects'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          email: 1,
+          projects: { $size: '$projects' }
+        }
+      },
+      {
+        $sort: { projects: -1 }
+      },
+      {
+        $limit: 5
+      }
+    ]);
+
+    return clients;
+  } catch (error) {
+    console.error('Error in getTopClientsData:', error);
+    return [];
+  }
+};
+
 module.exports = {
   getLoginPage,
   login,
@@ -631,5 +804,8 @@ module.exports = {
   // Client APIs
   setActive,
   setInactive,
-  getProjectsPage
+  getProjectsPage,
+  // Top Performers APIs
+  getTopEngineers,
+  getTopClients
 };
